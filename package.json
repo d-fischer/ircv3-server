@@ -1,0 +1,39 @@
+{
+  "name": "ircv3-server",
+  "description": "A basic IRC server framework.",
+  "version": "0.0.0",
+  "main": "lib",
+  "types": "lib/index",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/d-fischer/ircv3-server.git"
+  },
+  "scripts": {
+    "lint": "tslint --project .",
+    "build": "tsc",
+    "start": "node $NODE_DEBUG_OPTION lib/index.js",
+    "start:ts": "ts-node $NODE_DEBUG_OPTION src/index.ts",
+    "rebuild": "rimraf lib && yarn run build",
+    "prepare": "yarn run lint && yarn run rebuild"
+  },
+  "devDependencies": {
+    "@types/escape-string-regexp": "0.0.30",
+    "@types/node": "^8.0.19",
+    "@types/ws": "3.0.0",
+    "rimraf": "^2.6.2",
+    "tslint": "^5.11.0",
+    "tslint-eslint-rules": "^5.4.0",
+    "typescript": "^3.2.2"
+  },
+  "dependencies": {
+    "@d-fischer/logger": "^0.1.1",
+    "@types/clone": "^0.1.30",
+    "escape-string-regexp": "^1.0.5",
+    "ircv3": "^0.12.1",
+    "ts-node": "^7.0.1",
+    "typed-event-emitter": "^1.1.0",
+    "universal-websocket-client": "^1.0.1",
+    "ws": "^3.1.0"
+  }
+}
