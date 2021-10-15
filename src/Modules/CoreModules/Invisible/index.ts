@@ -8,11 +8,12 @@ export default class InvisibleModule extends Module {
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._invisibleMode);
+		components.addHook('userCreate', this.onUserCreate);
 	}
 
-	onUserCreate(user: User): ModuleResult {
+	onUserCreate = (user: User): ModuleResult => {
 		user.addMode(this._invisibleMode);
 
 		return ModuleResult.NEXT;
-	}
+	};
 }

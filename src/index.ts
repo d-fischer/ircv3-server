@@ -16,3 +16,4 @@ server.loadModule(TopicLockModule);
 server.loadModule(InviteModule);
 
 server.listen(6667);
+console.log('Listening on port 6667');

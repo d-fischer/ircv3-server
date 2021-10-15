@@ -10,9 +10,11 @@ export default class TopicLockModule extends Module {
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._topicLockMode);
+		components.addHook('preTopicChange', this.onPreTopicChange);
+		components.addHook('channelCreate', this.onChannelCreate);
 	}
 
-	onPreTopicChange(channel: Channel, user: User): ModuleResult {
+	onPreTopicChange = (channel: Channel, user: User): ModuleResult => {
 		if (channel.hasModeSet(this._topicLockMode) && !channel.isUserAtLeast(user, 'op')) {
 			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 				channel: channel.name,
@@ -22,11 +24,11 @@ export default class TopicLockModule extends Module {
 		}
 
 		return ModuleResult.NEXT;
-	}
+	};
 
-	onChannelCreate(channel: Channel): ModuleResult {
+	onChannelCreate = (channel: Channel): ModuleResult => {
 		channel.addMode(this._topicLockMode);
 
 		return ModuleResult.NEXT;
-	}
+	};
 }

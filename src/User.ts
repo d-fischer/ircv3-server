@@ -27,7 +27,7 @@ export class User extends EventEmitter implements ModeHolder {
 
 	constructor(protected _server: Server, protected _socket: net.Socket) {
 		super();
-		_server.callHook('onUserCreate', this);
+		_server.callHook('userCreate', this);
 		_socket.on('data', data => {
 			for (const line of data.toString().split(/\r?\n/)) {
 				if (line) {
@@ -213,7 +213,7 @@ export class User extends EventEmitter implements ModeHolder {
 			this._socket.removeAllListeners('data');
 			this._socket.destroy();
 			this.removeListener();
-			this._server.callHook('onUserDestroy', this);
+			this._server.callHook('userDestroy', this);
 			return true;
 		}
 
@@ -230,7 +230,7 @@ export class User extends EventEmitter implements ModeHolder {
 		params: Partial<MessageParamValues<T>>,
 		prefix: MessagePrefix = this._server.serverPrefix
 	): void {
-		this.writeLine(createMessage(type, params, prefix).toString(true));
+		this.writeLine(createMessage(type, params, prefix, undefined, undefined, true).toString(true));
 	}
 
 	sendNumericReply<T extends Message>(type: MessageConstructor<T>, params: Partial<MessageParamValues<T>>): void {
@@ -241,7 +241,10 @@ export class User extends EventEmitter implements ModeHolder {
 					me: this.connectionIdentifier,
 					...params
 				},
-				this._server.serverPrefix
+				this._server.serverPrefix,
+				undefined,
+				undefined,
+				true
 			).toString(true)
 		);
 	}

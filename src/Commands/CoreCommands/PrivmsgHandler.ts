@@ -16,7 +16,7 @@ export default class PrivmsgHandler extends CommandHandler<MessageTypes.Commands
 				const channel = server.getChannelByName(cmd.params.target);
 
 				if (channel) {
-					const result = server.callHook('onChannelMessage', channel, user, cmd.params.content);
+					const result = server.callHook('channelMessage', channel, user, cmd.params.content);
 					if (result !== ModuleResult.DENY) {
 						channel.broadcastMessage(
 							MessageTypes.Commands.PrivateMessage,

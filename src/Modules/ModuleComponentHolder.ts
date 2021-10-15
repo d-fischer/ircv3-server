@@ -1,12 +1,16 @@
 import type { ModeHandler } from '../Modes/ModeHandler';
 import type { Server } from '../Server';
 import type CommandHandler from '../Commands/CommandHandler';
+import type { Module } from './Module';
+import { ModuleHook } from './ModuleHook';
+import type { ModuleHookTypes } from './ModuleHook';
 
 export default class ModuleComponentHolder {
 	private _modes: ModeHandler[] = [];
 	private readonly _commands: CommandHandler[] = [];
+	private readonly _hooks: Array<ModuleHook<never>> = [];
 
-	constructor(private readonly _server: Server) {}
+	constructor(private readonly _module: Module, private readonly _server: Server) {}
 
 	addMode(mode: ModeHandler): void {
 		this._server.addMode(mode);
@@ -19,12 +23,21 @@ export default class ModuleComponentHolder {
 		}
 	}
 
+	addHook<HookType extends keyof ModuleHookTypes>(type: HookType, callback: ModuleHookTypes[HookType]): void {
+		const hook = new ModuleHook(this._module, type, callback) as ModuleHook<never>;
+		this._server.addModuleHook(hook);
+		this._hooks.push(hook);
+	}
+
 	removeAll(): void {
 		for (const mode of this._modes) {
 			this._server.removeMode(mode);
 		}
 		for (const command of this._commands) {
 			this._server.removeCommand(command);
+		}
+		for (const hook of this._hooks) {
+			this._server.removeModuleHook(hook);
 		}
 		this._modes = [];
 	}

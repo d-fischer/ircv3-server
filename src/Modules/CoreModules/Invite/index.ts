@@ -16,6 +16,8 @@ export default class InviteModule extends Module {
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._inviteOnlyMode);
 		components.addCommand(this._inviteCommand);
+		components.addHook('channelJoin', this.onChannelJoin);
+		components.addHook('userDestroy', this.onUserDestroy);
 	}
 
 	_addInvite(invite: Invite): void {
@@ -31,7 +33,7 @@ export default class InviteModule extends Module {
 		invitesForThisUser.add(invite);
 	}
 
-	onChannelJoin(channel: Channel, user: User): ModuleResult {
+	onChannelJoin = (channel: Channel, user: User): ModuleResult => {
 		if (channel.hasModeSet(this._inviteOnlyMode)) {
 			const invitesForUser = this._invitesByUser.get(user);
 
@@ -53,9 +55,9 @@ export default class InviteModule extends Module {
 		}
 
 		return ModuleResult.NEXT;
-	}
+	};
 
-	onUserDestroy(user: User): ModuleResult {
+	onUserDestroy = (user: User): ModuleResult => {
 		if (this._invitesByUser.has(user)) {
 			for (const invite of this._invitesByUser.get(user)!) {
 				this._invites.delete(invite);
@@ -65,5 +67,5 @@ export default class InviteModule extends Module {
 		}
 
 		return ModuleResult.NEXT;
-	}
+	};
 }

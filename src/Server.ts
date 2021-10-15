@@ -22,8 +22,9 @@ import PrivmsgHandler from './Commands/CoreCommands/PrivmsgHandler';
 import TopicHandler from './Commands/CoreCommands/TopicHandler';
 import UserRegistrationHandler from './Commands/CoreCommands/UserRegistrationHandler';
 import type { ModeHandler, ModeType } from './Modes/ModeHandler';
-import type { Module, ModuleHooks } from './Modules/Module';
+import type { Module } from './Modules/Module';
 import { ModuleResult } from './Modules/Module';
+import type { ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
 import { User } from './User';
 
 export interface ServerConfiguration {
@@ -46,18 +47,18 @@ export class Server {
 	private readonly _netServer = net.createServer(socket => this.initClientConnection(socket));
 	private readonly _startupTime = new Date();
 
-	private readonly _moduleHooks = new Map(
+	private readonly _hooksByType = new Map(
 		(
 			[
-				'onUserCreate',
-				'onUserDestroy',
-				'onPreTopicChange',
-				'onChannelMessage',
-				'onModeChange',
-				'onChannelCreate',
-				'onChannelJoin'
-			] as Array<keyof ModuleHooks>
-		).map((hookName): [keyof ModuleHooks, Set<ModuleHooks>] => [hookName, new Set<ModuleHooks>()])
+				'userCreate',
+				'userDestroy',
+				'preTopicChange',
+				'channelMessage',
+				'modeChange',
+				'channelCreate',
+				'channelJoin'
+			] as Array<keyof ModuleHookTypes>
+		).map((hookName): [keyof ModuleHookTypes, Set<ModuleHook<never>>] => [hookName, new Set<ModuleHook<never>>()])
 	);
 
 	private readonly _prefixes: InternalAccessLevelDefinition[] = [
@@ -274,7 +275,7 @@ export class Server {
 			channel = channelObject;
 		}
 
-		const res = this.callHook('onChannelJoin', channel, user);
+		const res = this.callHook('channelJoin', channel, user);
 		if (res === ModuleResult.DENY) {
 			if (isFirst) {
 				this._channels.delete(this._caseFoldString(channel.name));
@@ -422,17 +423,16 @@ export class Server {
 	loadModule<T extends Module>(moduleClass: new () => T): void {
 		const module = new moduleClass();
 		module.load(this);
-		for (const hookName of Object.keys(moduleClass.prototype) as Array<keyof ModuleHooks>) {
-			if (this._moduleHooks.has(hookName)) {
-				this._moduleHooks.get(hookName)!.add(module);
-			}
+	}
+
+	addModuleHook(hook: ModuleHook<never>): void {
+		if (this._hooksByType.has(hook.type)) {
+			this._hooksByType.get(hook.type)!.add(hook);
 		}
 	}
 
-	unloadModule(module: Module): void {
-		for (const hookSet of this._moduleHooks.values()) {
-			hookSet.delete(module);
-		}
+	removeModuleHook(hook: ModuleHook<never>): void {
+		this._hooksByType.get(hook.type)?.delete(hook);
 	}
 
 	addMode(mode: ModeHandler): void {
@@ -459,15 +459,15 @@ export class Server {
 		this._commands.delete(command.command);
 	}
 
-	callHook<N extends keyof ModuleHooks>(name: N, ...args: Parameters<NonNullable<ModuleHooks[N]>>): ModuleResult {
-		const hooks = this._moduleHooks.get(name)!;
+	callHook<HookType extends keyof ModuleHookTypes>(
+		name: HookType,
+		...args: Parameters<ModuleHookTypes[HookType]>
+	): ModuleResult {
+		const hooks = this._hooksByType.get(name)!;
 		let result = ModuleResult.NEXT;
 
-		for (const hookModule of hooks) {
-			const hookFunction = hookModule[name]! as (
-				...someArgs: Parameters<NonNullable<ModuleHooks[N]>>
-			) => ModuleResult;
-			result = hookFunction.apply(hookModule, args);
+		for (const hook of hooks) {
+			result = (hook as ModuleHook<HookType>).call(...args);
 
 			if (result !== ModuleResult.NEXT) {
 				break;

@@ -18,7 +18,7 @@ export default class TopicHandler extends CommandHandler<MessageTypes.Commands.T
 
 				if (channel) {
 					if (newTopic) {
-						const result = server.callHook('onPreTopicChange', channel, user, newTopic);
+						const result = server.callHook('preTopicChange', channel, user, newTopic);
 						if (result !== ModuleResult.DENY) {
 							channel.changeTopic(newTopic, user);
 						}

@@ -23,7 +23,7 @@ export default class Channel implements ModeHolder {
 		(a.param && b.param ? a.param.localeCompare(b.param) : 0);
 
 	constructor(private readonly _name: string, creator: User, private readonly _server: Server) {
-		_server.callHook('onChannelCreate', this, creator);
+		_server.callHook('channelCreate', this, creator);
 	}
 
 	addUser(user: User, isFirst: boolean = false): void {

@@ -10,9 +10,11 @@ export default class NoExternalMessagesModule extends Module {
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._noExternalMessagesMode);
+		components.addHook('channelMessage', this.onChannelMessage);
+		components.addHook('channelCreate', this.onChannelCreate);
 	}
 
-	onChannelMessage(channel: Channel, user: User): ModuleResult {
+	onChannelMessage = (channel: Channel, user: User): ModuleResult => {
 		if (channel.hasModeSet(this._noExternalMessagesMode) && !channel.containsUser(user)) {
 			user.sendNumericReply(MessageTypes.Numerics.Error404CanNotSendToChan, {
 				channel: channel.name,
@@ -22,11 +24,11 @@ export default class NoExternalMessagesModule extends Module {
 		}
 
 		return ModuleResult.NEXT;
-	}
+	};
 
-	onChannelCreate(channel: Channel): ModuleResult {
+	onChannelCreate = (channel: Channel): ModuleResult => {
 		channel.addMode(this._noExternalMessagesMode);
 
 		return ModuleResult.NEXT;
-	}
+	};
 }
