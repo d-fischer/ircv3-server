@@ -349,12 +349,12 @@ export class Server {
 		if (!user.destroy()) {
 			return;
 		}
-		for (const channel of user.channels) {
-			this.unlinkUserFromChannel(user, channel);
-		}
 		this.broadcastToCommonChannelUsers(user, MessageTypes.Commands.ClientQuit, {
 			message: 'Bye bye!'
 		});
+		for (const channel of user.channels) {
+			this.unlinkUserFromChannel(user, channel);
+		}
 		const index = this._users.findIndex(u => u === user);
 		if (index === -1) {
 			console.error(`Could not find index of user ${user.connectionIdentifier}`);
