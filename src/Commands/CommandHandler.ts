@@ -1,6 +1,6 @@
-import { Message, MessageConstructor } from 'ircv3';
-import User from '../User';
-import Server from '../Server';
+import type { Message, MessageConstructor } from 'ircv3';
+import type { User } from '../User';
+import type { Server } from '../Server';
 
 export default abstract class CommandHandler<T extends Message = Message> {
 	private readonly _command: string;
@@ -9,11 +9,10 @@ export default abstract class CommandHandler<T extends Message = Message> {
 		this._command = type.COMMAND;
 	}
 
-	get command() {
+	get command(): string {
 		return this._command;
 	}
 
 	abstract handleCommand(cmd: T, user: User, server: Server): void;
-	// tslint:disable-next-line:no-empty
-	handleParseError(user: User, server: Server) {}
+	// handleParseError(user: User, server: Server) {}
 }

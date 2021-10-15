@@ -1,8 +1,8 @@
-import Channel from '../Channel';
-import User from '../User';
-import Server from '../Server';
-import ModeHolder from '../Modes/ModeHolder';
-import { SingleMode } from 'ircv3';
+import type Channel from '../Channel';
+import type { User } from '../User';
+import type { Server } from '../Server';
+import type ModeHolder from '../Modes/ModeHolder';
+import type { SingleMode } from 'ircv3';
 import ModuleComponentHolder from './ModuleComponentHolder';
 
 export enum ModuleResult {
@@ -12,26 +12,27 @@ export enum ModuleResult {
 }
 
 export interface ModuleHooks {
-	onUserCreate?(user: User): ModuleResult;
-	onUserDestroy?(user: User): ModuleResult;
-	onChannelCreate?(channel: Channel, user: User): ModuleResult;
-	onPreTopicChange?(channel: Channel, user: User, topic: string): ModuleResult;
-	onChannelMessage?(channel: Channel, user: User, message: string): ModuleResult;
-	onChannelJoin?(channel: Channel, user: User): ModuleResult;
-	onModeChange?(target: ModeHolder, user: User, changes: SingleMode[]): ModuleResult;
+	onUserCreate?: (user: User) => ModuleResult;
+	onUserDestroy?: (user: User) => ModuleResult;
+	onChannelCreate?: (channel: Channel, user: User) => ModuleResult;
+	onPreTopicChange?: (channel: Channel, user: User, topic: string) => ModuleResult;
+	onChannelMessage?: (channel: Channel, user: User, message: string) => ModuleResult;
+	onChannelJoin?: (channel: Channel, user: User) => ModuleResult;
+	onModeChange?: (target: ModeHolder, user: User, changes: SingleMode[]) => ModuleResult;
 }
 
-abstract class Module {
+export abstract class Module {
 	private _componentHolder?: ModuleComponentHolder;
 
-	load(server: Server) {
+	load(server: Server): void {
 		this._componentHolder = new ModuleComponentHolder(server);
 		this.init(this._componentHolder);
 	}
 
 	abstract init(components: ModuleComponentHolder): void;
 
-	unload(server: Server) {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	unload(server: Server): void {
 		if (!this._componentHolder) {
 			throw new Error('Trying to unload module that was not loaded');
 		}
@@ -41,7 +42,5 @@ abstract class Module {
 }
 
 // this is just to merge the hooks interface to the class above
-// tslint:disable-next-line:no-empty-interface
-interface Module extends ModuleHooks {}
-
-export default Module;
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface Module extends ModuleHooks {}

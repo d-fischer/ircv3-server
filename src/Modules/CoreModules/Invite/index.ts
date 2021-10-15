@@ -1,11 +1,11 @@
-import Module, { ModuleResult } from '../../Module';
+import { MessageTypes } from 'ircv3';
+import { Module, ModuleResult } from '../../Module';
 import InviteOnlyModeHandler from './InviteOnlyModeHandler';
-import ModuleComponentHolder from '../../ModuleComponentHolder';
+import type ModuleComponentHolder from '../../ModuleComponentHolder';
 import InviteCommandHandler from './InviteCommandHandler';
-import Invite from './Invite';
-import User from '../../../User';
-import Channel from '../../../Channel';
-import * as Numerics from 'ircv3/lib/Message/MessageTypes/Numerics';
+import type Invite from './Invite';
+import type { User } from '../../../User';
+import type Channel from '../../../Channel';
 
 export default class InviteModule extends Module {
 	private readonly _invites = new Set<Invite>();
@@ -13,12 +13,12 @@ export default class InviteModule extends Module {
 	private readonly _inviteOnlyMode = new InviteOnlyModeHandler();
 	private readonly _inviteCommand = new InviteCommandHandler(this._inviteOnlyMode, this);
 
-	init(components: ModuleComponentHolder) {
+	init(components: ModuleComponentHolder): void {
 		components.addMode(this._inviteOnlyMode);
 		components.addCommand(this._inviteCommand);
 	}
 
-	_addInvite(invite: Invite) {
+	_addInvite(invite: Invite): void {
 		this._invites.add(invite);
 
 		let invitesForThisUser = this._invitesByUser.get(invite.user);
@@ -45,7 +45,7 @@ export default class InviteModule extends Module {
 				}
 			}
 
-			user.sendNumericReply(Numerics.Error473InviteOnlyChan, {
+			user.sendNumericReply(MessageTypes.Numerics.Error473InviteOnlyChan, {
 				channel: channel.name,
 				suffix: 'Cannot join channel (+i)'
 			});

@@ -1,44 +1,47 @@
+import { MessageTypes } from 'ircv3';
 import CommandHandler from '../../../Commands/CommandHandler';
-import ChannelInvite from 'ircv3/lib/Message/MessageTypes/Commands/ChannelInvite';
-import User from '../../../User';
-import Server from '../../../Server';
-import InviteOnlyModeHandler from './InviteOnlyModeHandler';
-import * as Numerics from 'ircv3/lib/Message/MessageTypes/Numerics';
+import type { User } from '../../../User';
+import type { Server } from '../../../Server';
+import type InviteOnlyModeHandler from './InviteOnlyModeHandler';
 import Invite from './Invite';
-import InviteModule from './index';
+import type InviteModule from './index';
 
-export default class InviteCommandHandler extends CommandHandler<ChannelInvite> {
-	constructor(private _inviteOnlyMode: InviteOnlyModeHandler, private _inviteModule: InviteModule) {
-		super(ChannelInvite);
+export default class InviteCommandHandler extends CommandHandler<MessageTypes.Commands.ChannelInvite> {
+	constructor(private readonly _inviteOnlyMode: InviteOnlyModeHandler, private readonly _inviteModule: InviteModule) {
+		super(MessageTypes.Commands.ChannelInvite);
 	}
 
-	handleCommand({ params: { channel: channelName, target: targetNick } }: ChannelInvite, user: User, server: Server) {
+	handleCommand(
+		{ params: { channel: channelName, target: targetNick } }: MessageTypes.Commands.ChannelInvite,
+		user: User,
+		server: Server
+	): void {
 		const channel = server.getChannelByName(channelName);
 		if (!channel) {
-			user.sendNumericReply(Numerics.Error403NoSuchChannel, {
+			user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
 				channel: channelName,
 				suffix: 'No such channel'
 			});
 			return;
 		}
 		if (!channel.containsUser(user)) {
-			user.sendNumericReply(Numerics.Error442NotOnChannel, {
+			user.sendNumericReply(MessageTypes.Numerics.Error442NotOnChannel, {
 				channel: channel.name,
-				suffix: 'You\'re not on that channel'
+				suffix: "You're not on that channel"
 			});
 			return;
 		}
 
 		const target = server.getUserByNick(targetNick);
 		if (!target) {
-			user.sendNumericReply(Numerics.Error401NoSuchNick, {
+			user.sendNumericReply(MessageTypes.Numerics.Error401NoSuchNick, {
 				nick: targetNick,
 				suffix: 'No such nick'
 			});
 			return;
 		}
 		if (channel.containsUser(target)) {
-			user.sendNumericReply(Numerics.Error443UserOnChannel, {
+			user.sendNumericReply(MessageTypes.Numerics.Error443UserOnChannel, {
 				nick: target.nick,
 				channel: channel.name,
 				suffix: 'is already on channel'
@@ -47,7 +50,7 @@ export default class InviteCommandHandler extends CommandHandler<ChannelInvite> 
 		}
 
 		if (channel.hasModeSet(this._inviteOnlyMode) && !channel.isUserAtLeast(user, 'halfop')) {
-			user.sendNumericReply(Numerics.Error482ChanOPrivsNeeded, {
+			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 				channel: channel.name,
 				suffix: 'You need channel privileges to do this'
 			});
@@ -56,14 +59,18 @@ export default class InviteCommandHandler extends CommandHandler<ChannelInvite> 
 
 		this._inviteModule._addInvite(new Invite(target, channel, user));
 
-		user.sendNumericReply(Numerics.Reply341Inviting, {
+		user.sendNumericReply(MessageTypes.Numerics.Reply341Inviting, {
 			channel: channel.name,
 			nick: target.nick
 		});
 
-		target.sendMessage(ChannelInvite, {
-			channel: channel.name,
-			target: target.nick
-		}, user.prefix);
+		target.sendMessage(
+			MessageTypes.Commands.ChannelInvite,
+			{
+				channel: channel.name,
+				target: target.nick
+			},
+			user.prefix
+		);
 	}
 }

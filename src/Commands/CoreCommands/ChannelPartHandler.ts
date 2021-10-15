@@ -1,20 +1,18 @@
 import CommandHandler from '../CommandHandler';
-import ChannelPart from 'ircv3/lib/Message/MessageTypes/Commands/ChannelPart';
-import User from '../../User';
-import Server from '../../Server';
-import { isChannel } from 'ircv3';
-import * as Numerics from 'ircv3/lib/Message/MessageTypes/Numerics';
+import type { User } from '../../User';
+import type { Server } from '../../Server';
+import { isChannel, MessageTypes } from 'ircv3';
 
-export default class ChannelPartHandler extends CommandHandler<ChannelPart> {
+export default class ChannelPartHandler extends CommandHandler<MessageTypes.Commands.ChannelPart> {
 	constructor() {
-		super(ChannelPart);
+		super(MessageTypes.Commands.ChannelPart);
 	}
 
-	handleCommand(cmd: ChannelPart, user: User, server: Server) {
+	handleCommand(cmd: MessageTypes.Commands.ChannelPart, user: User, server: Server): void {
 		user.ifRegistered(() => {
 			const channelName = cmd.params.channel;
 			if (!isChannel(channelName)) {
-				user.sendNumericReply(Numerics.Error403NoSuchChannel, {
+				user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
 					channel: channelName,
 					suffix: 'No such channel'
 				});

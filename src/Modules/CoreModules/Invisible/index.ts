@@ -1,16 +1,16 @@
-import Module, { ModuleResult } from '../../Module';
-import ModuleComponentHolder from '../../ModuleComponentHolder';
+import { Module, ModuleResult } from '../../Module';
+import type ModuleComponentHolder from '../../ModuleComponentHolder';
 import InvisibleModeHandler from './InvisibleModeHandler';
-import User from '../../../User';
+import type { User } from '../../../User';
 
 export default class InvisibleModule extends Module {
 	private readonly _invisibleMode = new InvisibleModeHandler();
 
-	init(components: ModuleComponentHolder) {
+	init(components: ModuleComponentHolder): void {
 		components.addMode(this._invisibleMode);
 	}
 
-	onUserCreate(user: User) {
+	onUserCreate(user: User): ModuleResult {
 		user.addMode(this._invisibleMode);
 
 		return ModuleResult.NEXT;

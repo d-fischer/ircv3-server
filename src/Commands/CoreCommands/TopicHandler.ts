@@ -1,16 +1,15 @@
+import { MessageTypes } from 'ircv3';
 import CommandHandler from '../CommandHandler';
-import Topic from 'ircv3/lib/Message/MessageTypes/Commands/Topic';
-import User from '../../User';
-import Server from '../../Server';
+import type { User } from '../../User';
+import type { Server } from '../../Server';
 import { ModuleResult } from '../../Modules/Module';
-import * as Numerics from 'ircv3/lib/Message/MessageTypes/Numerics';
 
-export default class TopicHandler extends CommandHandler<Topic> {
+export default class TopicHandler extends CommandHandler<MessageTypes.Commands.Topic> {
 	constructor() {
-		super(Topic);
+		super(MessageTypes.Commands.Topic);
 	}
 
-	handleCommand(cmd: Topic, user: User, server: Server) {
+	handleCommand(cmd: MessageTypes.Commands.Topic, user: User, server: Server): void {
 		user.ifRegistered(() => {
 			const { channel: channelName, newTopic } = cmd.params;
 
@@ -29,7 +28,7 @@ export default class TopicHandler extends CommandHandler<Topic> {
 					return;
 				}
 			}
-			user.sendNumericReply(Numerics.Error403NoSuchChannel, {
+			user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
 				channel: channelName,
 				suffix: 'No such channel'
 			});

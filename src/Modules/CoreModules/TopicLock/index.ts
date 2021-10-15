@@ -1,20 +1,20 @@
-import Module, { ModuleResult } from '../../Module';
+import { Module, ModuleResult } from '../../Module';
 import { MessageTypes } from 'ircv3';
-import Channel from '../../../Channel';
-import User from '../../../User';
+import type Channel from '../../../Channel';
+import type { User } from '../../../User';
 import TopicLockModeHandler from './TopicLockModeHandler';
-import ModuleComponentHolder from '../../ModuleComponentHolder';
+import type ModuleComponentHolder from '../../ModuleComponentHolder';
 
 export default class TopicLockModule extends Module {
 	private readonly _topicLockMode = new TopicLockModeHandler();
 
-	init(components: ModuleComponentHolder) {
+	init(components: ModuleComponentHolder): void {
 		components.addMode(this._topicLockMode);
 	}
 
-	onPreTopicChange(channel: Channel, user: User) {
+	onPreTopicChange(channel: Channel, user: User): ModuleResult {
 		if (channel.hasModeSet(this._topicLockMode) && !channel.isUserAtLeast(user, 'op')) {
-			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOPrivsNeeded, {
+			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 				channel: channel.name,
 				suffix: 'You do not have access to change the topic on this channel'
 			});
@@ -24,7 +24,7 @@ export default class TopicLockModule extends Module {
 		return ModuleResult.NEXT;
 	}
 
-	onChannelCreate(channel: Channel, user: User) {
+	onChannelCreate(channel: Channel): ModuleResult {
 		channel.addMode(this._topicLockMode);
 
 		return ModuleResult.NEXT;

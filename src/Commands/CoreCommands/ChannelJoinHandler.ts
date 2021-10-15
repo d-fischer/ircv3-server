@@ -1,20 +1,18 @@
+import { isChannel, MessageTypes } from 'ircv3';
+import type { Server } from '../../Server';
+import type { User } from '../../User';
 import CommandHandler from '../CommandHandler';
-import ChannelJoin from 'ircv3/lib/Message/MessageTypes/Commands/ChannelJoin';
-import User from '../../User';
-import Server from '../../Server';
-import { isChannel } from 'ircv3';
-import * as Numerics from 'ircv3/lib/Message/MessageTypes/Numerics';
 
-export default class ChannelJoinHandler extends CommandHandler<ChannelJoin> {
+export default class ChannelJoinHandler extends CommandHandler<MessageTypes.Commands.ChannelJoin> {
 	constructor() {
-		super(ChannelJoin);
+		super(MessageTypes.Commands.ChannelJoin);
 	}
 
-	handleCommand(cmd: ChannelJoin, user: User, server: Server) {
+	handleCommand(cmd: MessageTypes.Commands.ChannelJoin, user: User, server: Server): void {
 		user.ifRegistered(() => {
 			const channelName = cmd.params.channel;
 			if (!isChannel(channelName)) {
-				user.sendNumericReply(Numerics.Error403NoSuchChannel, {
+				user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
 					channel: channelName,
 					suffix: 'No such channel'
 				});

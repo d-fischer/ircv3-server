@@ -1,16 +1,15 @@
+import { MessageTypes } from 'ircv3';
 import CommandHandler from '../CommandHandler';
-import UserRegistration from 'ircv3/lib/Message/MessageTypes/Commands/UserRegistration';
-import User from '../../User';
-import * as Numerics from 'ircv3/lib/Message/MessageTypes/Numerics';
+import type { User } from '../../User';
 
-export default class UserRegistrationHandler extends CommandHandler<UserRegistration> {
+export default class UserRegistrationHandler extends CommandHandler<MessageTypes.Commands.UserRegistration> {
 	constructor() {
-		super(UserRegistration);
+		super(MessageTypes.Commands.UserRegistration);
 	}
 
-	handleCommand(cmd: UserRegistration, user: User) {
+	handleCommand(cmd: MessageTypes.Commands.UserRegistration, user: User): void {
 		if (user.isRegistered) {
-			user.sendNumericReply(Numerics.Error462AlreadyRegistered, {
+			user.sendNumericReply(MessageTypes.Numerics.Error462AlreadyRegistered, {
 				suffix: 'You may not reregister'
 			});
 		} else {

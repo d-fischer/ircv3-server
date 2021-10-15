@@ -1,23 +1,30 @@
+import type { ConstructedType } from '@d-fischer/shared-utils';
+import type {
+	AccessLevelDefinition,
+	MessageConstructor,
+	MessageParamValues,
+	MessagePrefix,
+	SupportedModesByType
+} from 'ircv3';
+import { MessageTypes, NotEnoughParametersError, ParameterRequirementMismatchError, parseMessage } from 'ircv3';
 import * as net from 'net';
-import User from './User';
-import { AccessLevelDefinition, MessageConstructor, MessagePrefix, MessageTypes, NotEnoughParametersError, ParameterRequirementMismatchError, parseMessage, SupportedModesByType } from 'ircv3';
 import Channel from './Channel';
-import { ArgumentTypes } from './Toolkit/TypeTools';
-import Module, { ModuleHooks, ModuleResult } from './Modules/Module';
-import ModeHandler, { ModeType } from './Modes/ModeHandler';
-import CommandHandler from './Commands/CommandHandler';
-import UserRegistrationHandler from './Commands/CoreCommands/UserRegistrationHandler';
-import NickChangeHandler from './Commands/CoreCommands/NickChangeHandler';
+import type CommandHandler from './Commands/CommandHandler';
+import ChannelJoinHandler from './Commands/CoreCommands/ChannelJoinHandler';
+import ChannelKickHandler from './Commands/CoreCommands/ChannelKickHandler';
+import ChannelPartHandler from './Commands/CoreCommands/ChannelPartHandler';
 import ClientQuitHandler from './Commands/CoreCommands/ClientQuitHandler';
+import ModeCommandHandler from './Commands/CoreCommands/ModeCommandHandler';
+import NamesHandler from './Commands/CoreCommands/NamesHandler';
+import NickChangeHandler from './Commands/CoreCommands/NickChangeHandler';
 import PingHandler from './Commands/CoreCommands/PingHandler';
 import PrivmsgHandler from './Commands/CoreCommands/PrivmsgHandler';
-import ModeCommandHandler from './Commands/CoreCommands/ModeCommandHandler';
-import ChannelJoinHandler from './Commands/CoreCommands/ChannelJoinHandler';
-import ChannelPartHandler from './Commands/CoreCommands/ChannelPartHandler';
-import NamesHandler from './Commands/CoreCommands/NamesHandler';
-import { ConstructedType, MessageParams } from 'ircv3/lib/Toolkit/TypeTools';
-import ChannelKickHandler from './Commands/CoreCommands/ChannelKickHandler';
 import TopicHandler from './Commands/CoreCommands/TopicHandler';
+import UserRegistrationHandler from './Commands/CoreCommands/UserRegistrationHandler';
+import type { ModeHandler, ModeType } from './Modes/ModeHandler';
+import type { Module, ModuleHooks } from './Modules/Module';
+import { ModuleResult } from './Modules/Module';
+import { User } from './User';
 
 export interface ServerConfiguration {
 	serverAddress: string;
@@ -30,7 +37,7 @@ export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
 	minLevelToSet: string;
 }
 
-export default class Server {
+export class Server {
 	private readonly _users: User[] = [];
 	private readonly _nickUserMap = new Map<string, User>();
 	private readonly _channels = new Map<string, Channel>();
@@ -39,15 +46,19 @@ export default class Server {
 	private readonly _netServer = net.createServer(socket => this.initClientConnection(socket));
 	private readonly _startupTime = new Date();
 
-	private readonly _moduleHooks = new Map(([
-		'onUserCreate',
-		'onUserDestroy',
-		'onPreTopicChange',
-		'onChannelMessage',
-		'onModeChange',
-		'onChannelCreate',
-		'onChannelJoin'
-	] as Array<keyof ModuleHooks>).map((hookName): [keyof ModuleHooks, Set<ModuleHooks>] => [hookName, new Set<ModuleHooks>()]));
+	private readonly _moduleHooks = new Map(
+		(
+			[
+				'onUserCreate',
+				'onUserDestroy',
+				'onPreTopicChange',
+				'onChannelMessage',
+				'onModeChange',
+				'onChannelCreate',
+				'onChannelJoin'
+			] as Array<keyof ModuleHooks>
+		).map((hookName): [keyof ModuleHooks, Set<ModuleHooks>] => [hookName, new Set<ModuleHooks>()])
+	);
 
 	private readonly _prefixes: InternalAccessLevelDefinition[] = [
 		{
@@ -84,38 +95,12 @@ export default class Server {
 
 	private readonly _registeredModes = new Set<ModeHandler>();
 
-	get supportedChannelModes(): SupportedModesByType {
-		return {
-			prefix: this._prefixes.reduceRight((result, prefix) => result + prefix.modeChar, ''),
-			list: '',
-			alwaysWithParam: '',
-			paramWhenSet: '',
-			noParam: Array.from(this._registeredModes).filter(mode => mode.type === 'channel').map(mode => mode.letter).sort().join('')
-		};
-	}
-
-	get supportedUserModes() {
-		return Array.from(this._registeredModes).filter(mode => mode.type === 'user').map(mode => mode.letter).sort().join('');
-	}
-
-	getPrefixDefinitionByModeChar(char: string) {
-		return this._prefixes.find(def => def.modeChar === char);
-	}
-
-	getAccessLevelByModeChar(char: string) {
-		return this._prefixes.findIndex(def => def.modeChar === char);
-	}
-
-	getAccessLevelByName(name: string) {
-		return this._prefixes.findIndex(def => def.name === name);
-	}
-
 	constructor(private readonly _config: ServerConfiguration) {
 		if (!_config.serverName) {
 			_config.serverName = _config.serverAddress;
 		}
 		if (!_config.version) {
-			_config.version = `node-ircv3-server-${require('../package.json').version}`;
+			_config.version = 'node-ircv3-server-0.0.1';
 		}
 
 		this.addCommand(new UserRegistrationHandler());
@@ -131,7 +116,41 @@ export default class Server {
 		this.addCommand(new ChannelKickHandler());
 	}
 
-	listen(port: number, bindIp?: string) {
+	get supportedChannelModes(): SupportedModesByType {
+		return {
+			prefix: this._prefixes.reduceRight((result, prefix) => result + prefix.modeChar, ''),
+			list: '',
+			alwaysWithParam: '',
+			paramWhenSet: '',
+			noParam: Array.from(this._registeredModes)
+				.filter(mode => mode.type === 'channel')
+				.map(mode => mode.letter)
+				.sort()
+				.join('')
+		};
+	}
+
+	get supportedUserModes(): string {
+		return Array.from(this._registeredModes)
+			.filter(mode => mode.type === 'user')
+			.map(mode => mode.letter)
+			.sort()
+			.join('');
+	}
+
+	getPrefixDefinitionByModeChar(char: string): InternalAccessLevelDefinition | null {
+		return this._prefixes.find(def => def.modeChar === char) ?? null;
+	}
+
+	getAccessLevelByModeChar(char: string): number {
+		return this._prefixes.findIndex(def => def.modeChar === char);
+	}
+
+	getAccessLevelByName(name: string): number {
+		return this._prefixes.findIndex(def => def.name === name);
+	}
+
+	listen(port: number, bindIp?: string): void {
 		this._netServer.listen(port, bindIp);
 	}
 
@@ -145,7 +164,7 @@ export default class Server {
 		};
 	}
 
-	initClientConnection(socket: net.Socket) {
+	initClientConnection(socket: net.Socket): void {
 		const user = new User(this, socket);
 		user.onLine(line => {
 			try {
@@ -160,7 +179,7 @@ export default class Server {
 					handler.handleCommand(cmd, user, this);
 				} else {
 					user.sendNumericReply(MessageTypes.Numerics.Error421UnknownCommand, {
-						command: cmd.command,
+						originalCommand: cmd.command,
 						suffix: 'Unknown command'
 					});
 				}
@@ -173,7 +192,7 @@ export default class Server {
 						return;
 					}
 					user.sendNumericReply(MessageTypes.Numerics.Error461NeedMoreParams, {
-						command: e.command,
+						originalCommand: e.command,
 						suffix: 'Not enough parameters'
 					});
 					return;
@@ -188,10 +207,8 @@ export default class Server {
 					}
 				}
 
-				// tslint:disable:no-console
 				console.error(`Error processing command: "${line}"`);
 				console.error(e);
-				// tslint:enable:no-console
 			}
 		});
 		user.onRegister(() => {
@@ -200,7 +217,7 @@ export default class Server {
 				welcomeText: 'the server welcomes you!'
 			});
 			user.sendNumericReply(MessageTypes.Numerics.Reply002YourHost, {
-				yourHost: `Your host is ${this._config.serverAddress}, running version ${this._config.version}`
+				yourHost: `Your host is ${this._config.serverAddress}, running version ${this._config.version!}`
 			});
 			user.sendNumericReply(MessageTypes.Numerics.Reply003Created, {
 				createdText: `This server was created ${this._startupTime.toISOString()}`
@@ -213,18 +230,21 @@ export default class Server {
 				channelModes: Object.values(channelModes).join('').split('').sort().join('')
 			});
 			const reversedPrefixes = [...this._prefixes].reverse();
-			const prefixString = `(${reversedPrefixes.map(pref => pref.modeChar).join('')})${reversedPrefixes.map(pref => pref.prefix).join('')}`;
+			const prefixString = `(${reversedPrefixes.map(pref => pref.modeChar).join('')})${reversedPrefixes
+				.map(pref => pref.prefix)
+				.join('')}`;
 			const chanModesString = `${channelModes.list},${channelModes.alwaysWithParam},${channelModes.paramWhenSet},${channelModes.noParam}`;
-			user.sendNumericReply(MessageTypes.Numerics.Reply005ISupport, {
-				supports: `CHANTYPES=# NETWORK=${this._config.serverName} CHANMODES=${chanModesString} PREFIX=${prefixString}`,
+			user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
+				supports: `CHANTYPES=# NETWORK=${this._config
+					.serverName!} CHANMODES=${chanModesString} PREFIX=${prefixString}`,
 				suffix: 'are supported by this server'
 			});
 			if (user.modesAsString) {
-				user.sendNumericReply(MessageTypes.Numerics.Reply221UModeIs, {
+				user.sendNumericReply(MessageTypes.Numerics.Reply221UmodeIs, {
 					modes: user.modesAsString
 				});
 			}
-			this.sendMOTD(user);
+			this.sendMotd(user);
 		});
 		user.onNickChange(oldNick => {
 			if (oldNick) {
@@ -235,13 +255,13 @@ export default class Server {
 		this._users.push(user);
 	}
 
-	sendMOTD(user: User) {
-		user.sendNumericReply(MessageTypes.Numerics.Error422NoMOTD, {
+	sendMotd(user: User): void {
+		user.sendNumericReply(MessageTypes.Numerics.Error422NoMotd, {
 			suffix: 'MOTD File is missing'
 		});
 	}
 
-	joinChannel(user: User, channel: string | Channel) {
+	joinChannel(user: User, channel: string | Channel): void {
 		let isFirst = false;
 		if (typeof channel === 'string') {
 			const foldedName = this._caseFoldString(channel);
@@ -269,15 +289,19 @@ export default class Server {
 		user.addChannel(channel);
 		channel.addUser(user, isFirst);
 
-		channel.broadcastMessage(MessageTypes.Commands.ChannelJoin, {
-			channel: channel.name
-		}, user.prefix);
+		channel.broadcastMessage(
+			MessageTypes.Commands.ChannelJoin,
+			{
+				channel: channel.name
+			},
+			user.prefix
+		);
 		channel.sendTopic(user, false);
 
 		channel.sendNames(user);
 	}
 
-	partChannel(user: User, channel: string | Channel) {
+	partChannel(user: User, channel: string | Channel): void {
 		if (typeof channel === 'string') {
 			const channelObject = this.getChannelByName(channel);
 			if (!channelObject) {
@@ -293,30 +317,34 @@ export default class Server {
 		if (!channel.users.has(user)) {
 			user.sendNumericReply(MessageTypes.Numerics.Error442NotOnChannel, {
 				channel: channel.name,
-				suffix: 'You\'re not on that channel'
+				suffix: "You're not on that channel"
 			});
 		}
 
-		channel.broadcastMessage(MessageTypes.Commands.ChannelPart, {
-			channel: channel.name
-		}, user.prefix);
+		channel.broadcastMessage(
+			MessageTypes.Commands.ChannelPart,
+			{
+				channel: channel.name
+			},
+			user.prefix
+		);
 
 		this.unlinkUserFromChannel(user, channel);
 	}
 
-	nickExists(nick: string) {
+	nickExists(nick: string): boolean {
 		return this._nickUserMap.has(this._caseFoldString(nick));
 	}
 
-	getUserByNick(nick: string) {
+	getUserByNick(nick: string): User | undefined {
 		return this._nickUserMap.get(this._caseFoldString(nick));
 	}
 
-	getChannelByName(name: string) {
+	getChannelByName(name: string): Channel | undefined {
 		return this._channels.get(this._caseFoldString(name));
 	}
 
-	destroyConnection(user: User) {
+	destroyConnection(user: User): void {
 		if (!user.destroy()) {
 			return;
 		}
@@ -328,7 +356,6 @@ export default class Server {
 		});
 		const index = this._users.findIndex(u => u === user);
 		if (index === -1) {
-			// tslint:disable-next-line:no-console
 			console.error(`Could not find index of user ${user.connectionIdentifier}`);
 		} else {
 			this._users.splice(index, 1);
@@ -336,21 +363,21 @@ export default class Server {
 		if (user.nick) {
 			this._nickUserMap.delete(user.nick);
 		}
-		// tslint:disable-next-line:no-console
 		console.log(`${user.connectionIdentifier} disconnected. ${this._users.length} remaining.`);
 	}
 
-	unlinkUserFromChannel(user: User, channel: Channel) {
+	unlinkUserFromChannel(user: User, channel: Channel): void {
 		// can happen on multiple occasions - part, kick, quit
 		user.removeChannel(channel);
 		channel.removeUser(user);
 	}
 
-	destroyChannel(channel: Channel) {
+	destroyChannel(channel: Channel): void {
 		// usually, this should only happen when a channel is empty, but we kick everyone just in case
 		for (const user of channel.users) {
 			user.sendMessage(MessageTypes.Commands.ChannelKick, {
-				target: user.nick,
+				// people in channels should have a nick
+				target: user.nick!,
 				channel: channel.name,
 				comment: 'Channel is being destroyed'
 			});
@@ -360,7 +387,13 @@ export default class Server {
 		this._channels.delete(this._caseFoldString(channel.name));
 	}
 
-	broadcastToCommonChannelUsers<T extends MessageConstructor>(user: User, type: T, params: MessageParams<ConstructedType<T>>, includeSelf: boolean = false, prefix: MessagePrefix = user.prefix) {
+	broadcastToCommonChannelUsers<T extends MessageConstructor>(
+		user: User,
+		type: T,
+		params: MessageParamValues<ConstructedType<T>>,
+		includeSelf: boolean = false,
+		prefix: MessagePrefix = user.prefix
+	): void {
 		const commonUsers = new Set<User>();
 
 		for (const channel of user.channels) {
@@ -382,13 +415,11 @@ export default class Server {
 				return mode;
 			}
 		}
+
+		return undefined;
 	}
 
-	private _caseFoldString(str: string) {
-		return str.toLowerCase();
-	}
-
-	loadModule<T extends Module>(moduleClass: { new(): T }) {
+	loadModule<T extends Module>(moduleClass: new () => T): void {
 		const module = new moduleClass();
 		module.load(this);
 		for (const hookName of Object.keys(moduleClass.prototype) as Array<keyof ModuleHooks>) {
@@ -398,25 +429,25 @@ export default class Server {
 		}
 	}
 
-	unloadModule(module: Module) {
+	unloadModule(module: Module): void {
 		for (const hookSet of this._moduleHooks.values()) {
 			hookSet.delete(module);
 		}
 	}
 
-	addMode(mode: ModeHandler) {
+	addMode(mode: ModeHandler): void {
 		this._registeredModes.add(mode);
 	}
 
-	removeMode(mode: ModeHandler) {
+	removeMode(mode: ModeHandler): void {
 		this._registeredModes.delete(mode);
 	}
 
-	findModeByLetter(letter: string, type: ModeType) {
+	findModeByLetter(letter: string, type: ModeType): ModeHandler | undefined {
 		return Array.from(this._registeredModes).find(mode => mode.type === type && mode.letter === letter);
 	}
 
-	addCommand(command: CommandHandler) {
+	addCommand(command: CommandHandler): boolean {
 		if (this._commands.has(command.command)) {
 			return false;
 		}
@@ -424,17 +455,18 @@ export default class Server {
 		return true;
 	}
 
-	removeCommand(command: CommandHandler) {
+	removeCommand(command: CommandHandler): void {
 		this._commands.delete(command.command);
 	}
 
-	callHook<N extends keyof ModuleHooks>(name: N, ...args: ArgumentTypes<NonNullable<ModuleHooks[N]>>) {
+	callHook<N extends keyof ModuleHooks>(name: N, ...args: Parameters<NonNullable<ModuleHooks[N]>>): ModuleResult {
 		const hooks = this._moduleHooks.get(name)!;
 		let result = ModuleResult.NEXT;
 
 		for (const hookModule of hooks) {
-			// TODO this doesn't work like this without weakening the type to Function - we should find out a better way than that
-			const hookFunction: Function = hookModule[name]!;
+			const hookFunction = hookModule[name]! as (
+				...someArgs: Parameters<NonNullable<ModuleHooks[N]>>
+			) => ModuleResult;
 			result = hookFunction.apply(hookModule, args);
 
 			if (result !== ModuleResult.NEXT) {
@@ -443,5 +475,9 @@ export default class Server {
 		}
 
 		return result;
+	}
+
+	private _caseFoldString(str: string) {
+		return str.toLowerCase();
 	}
 }

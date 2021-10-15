@@ -1,18 +1,19 @@
+import { MessageTypes } from 'ircv3';
 import CommandHandler from '../CommandHandler';
-import Ping from 'ircv3/lib/Message/MessageTypes/Commands/Ping';
-import Pong from 'ircv3/lib/Message/MessageTypes/Commands/Pong';
-import User from '../../User';
-import Server from '../../Server';
+import type { User } from '../../User';
+import type { Server } from '../../Server';
 
-export default class PingHandler extends CommandHandler<Ping> {
+export default class PingHandler extends CommandHandler<MessageTypes.Commands.Ping> {
 	constructor() {
-		super(Ping);
+		super(MessageTypes.Commands.Ping);
 	}
 
-	handleCommand(cmd: Ping, user: User, server: Server) {
-		user.ifRegistered(() => user.sendMessage(Pong, {
-			server: server.serverAddress,
-			message: cmd.params.message
-		}));
+	handleCommand(cmd: MessageTypes.Commands.Ping, user: User, server: Server): void {
+		user.ifRegistered(() =>
+			user.sendMessage(MessageTypes.Commands.Pong, {
+				server: server.serverAddress,
+				message: cmd.params.message
+			})
+		);
 	}
 }

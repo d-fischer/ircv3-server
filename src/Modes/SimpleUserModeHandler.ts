@@ -1,6 +1,6 @@
 import SimpleModeHandler from './SimpleModeHandler';
-import User from '../User';
-import ModeHolder from './ModeHolder';
+import type { User } from '../User';
+import type ModeHolder from './ModeHolder';
 
 export default abstract class SimpleUserModeHandler extends SimpleModeHandler {
 	constructor(name: string, letter: string) {

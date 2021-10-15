@@ -1,27 +1,32 @@
 import { assertNever } from '../Toolkit/TypeTools';
-import User from '../User';
-import ModeHolder from './ModeHolder';
-import Server from '../Server';
+import type { User } from '../User';
+import type ModeHolder from './ModeHolder';
+import type { Server } from '../Server';
 
 export type ModeParamSpec = 'never' | 'setOnly' | 'always';
 export type ModeType = 'user' | 'channel';
 
-export default abstract class ModeHandler {
-	constructor(private readonly _name: string, private readonly _letter: string, private readonly _params: ModeParamSpec, private readonly _type: ModeType) {}
+export abstract class ModeHandler {
+	constructor(
+		private readonly _name: string,
+		private readonly _letter: string,
+		private readonly _params: ModeParamSpec,
+		private readonly _type: ModeType
+	) {}
 
-	get name() {
+	get name(): string {
 		return this._name;
 	}
 
-	get letter() {
+	get letter(): string {
 		return this._letter;
 	}
 
-	get type() {
+	get type(): ModeType {
 		return this._type;
 	}
 
-	needsParam(isSetting: boolean) {
+	needsParam(isSetting: boolean): boolean {
 		switch (this._params) {
 			case 'never': {
 				return false;
@@ -36,7 +41,7 @@ export default abstract class ModeHandler {
 			}
 
 			default: {
-				assertNever(this._params);
+				return assertNever(this._params);
 			}
 		}
 	}

@@ -1,18 +1,18 @@
-import Server from './Server';
+import { Server } from './Server';
 import TopicLockModule from './Modules/CoreModules/TopicLock';
 import InvisibleModule from './Modules/CoreModules/Invisible';
 import NoExternalMessagesModule from './Modules/CoreModules/NoExternalMessages';
 import InviteModule from './Modules/CoreModules/Invite';
 
-const _server = new Server({
+const server = new Server({
 	serverAddress: 'test.server'
 });
 
-_server.loadModule(InvisibleModule);
+server.loadModule(InvisibleModule);
 
-_server.loadModule(NoExternalMessagesModule);
-_server.loadModule(TopicLockModule);
+server.loadModule(NoExternalMessagesModule);
+server.loadModule(TopicLockModule);
 
-_server.loadModule(InviteModule);
+server.loadModule(InviteModule);
 
-_server.listen(6667);
+server.listen(6667);

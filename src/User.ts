@@ -1,18 +1,17 @@
-import * as net from 'net';
-import { EventEmitter, Listener } from 'typed-event-emitter';
-import Server from './Server';
-import { Message, MessageConstructor, MessageParam, MessagePrefix, SingleMode } from 'ircv3';
+import type { Listener } from '@d-fischer/typed-event-emitter';
+import { EventEmitter } from '@d-fischer/typed-event-emitter';
+import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
+import { createMessage, MessageTypes } from 'ircv3';
+import type * as net from 'net';
 import Channel from './Channel';
-import { ConstructedType, MessageParams } from 'ircv3/lib/Toolkit/TypeTools';
-import { Omit } from './Toolkit/TypeTools';
-import { ModeState } from './Toolkit/ModeTools';
-import * as MessageTypes from 'ircv3/lib/Message/MessageTypes';
-import ModeHolder from './Modes/ModeHolder';
-import ModeHandler from './Modes/ModeHandler';
+import type { ModeHandler } from './Modes/ModeHandler';
+import type ModeHolder from './Modes/ModeHolder';
+import type { Server } from './Server';
+import type { ModeState } from './Toolkit/ModeTools';
 
 type NickChangeResult = 'ok' | 'invalid' | 'inUse';
 
-export default class User extends EventEmitter implements ModeHolder {
+export class User extends EventEmitter implements ModeHolder {
 	private _nick?: string;
 	private _userName?: string;
 	private _realName?: string;
@@ -32,7 +31,6 @@ export default class User extends EventEmitter implements ModeHolder {
 		_socket.on('data', data => {
 			for (const line of data.toString().split(/\r?\n/)) {
 				if (line) {
-					// tslint:disable-next-line:no-console
 					console.log(`${this.connectionIdentifier} > ${line}`);
 					this.emit(this.onLine, line);
 				}
@@ -42,15 +40,8 @@ export default class User extends EventEmitter implements ModeHolder {
 		_socket.on('error', () => this._server.destroyConnection(this));
 	}
 
-	addMode(mode: ModeHandler) {
+	addMode(mode: ModeHandler): void {
 		this._modes.push({ mode });
-	}
-
-	private _checkNewRegistration() {
-		if (!this._registered && this._nick && this._userName && this._realName) {
-			this._registered = true;
-			this.emit(this.onRegister);
-		}
 	}
 
 	setNick(nick: string): NickChangeResult {
@@ -68,7 +59,7 @@ export default class User extends EventEmitter implements ModeHolder {
 		return 'ok';
 	}
 
-	setUserRegistration(user: string, realName: string) {
+	setUserRegistration(user: string, realName: string): void {
 		this._realName = realName;
 		this._userName = user;
 		this._checkNewRegistration();
@@ -106,15 +97,15 @@ export default class User extends EventEmitter implements ModeHolder {
 		};
 	}
 
-	get modes() {
+	get modes(): ModeState[] {
 		return this._modes;
 	}
 
-	get modesAsString() {
+	get modesAsString(): string {
 		return `+${this._modes.map(mode => mode.mode.letter).join('')}`;
 	}
 
-	ifRegistered(cb: () => void) {
+	ifRegistered(cb: () => void): void {
 		if (this.isRegistered) {
 			cb();
 		} else {
@@ -124,7 +115,7 @@ export default class User extends EventEmitter implements ModeHolder {
 		}
 	}
 
-	processModes(changes: SingleMode[]) {
+	processModes(changes: SingleMode[]): void {
 		const resultingModes = this._modes.slice();
 		const filteredChanges: SingleMode[] = [];
 		for (const mode of changes) {
@@ -135,7 +126,9 @@ export default class User extends EventEmitter implements ModeHolder {
 				continue;
 			}
 			if (mode.action === 'add') {
-				const removalIndex = filteredChanges.findIndex(change => change.letter === mode.letter && change.action === 'remove');
+				const removalIndex = filteredChanges.findIndex(
+					change => change.letter === mode.letter && change.action === 'remove'
+				);
 				if (removalIndex !== -1) {
 					filteredChanges.splice(removalIndex, 1);
 				} else if (this._modes.find(currentMode => currentMode.mode.letter === mode.letter)) {
@@ -147,13 +140,15 @@ export default class User extends EventEmitter implements ModeHolder {
 					mode: modeDescriptor
 				});
 			} else if (mode.action === 'remove') {
-				const addIndex = filteredChanges.findIndex(change => change.letter === mode.letter && change.action === 'add');
+				const addIndex = filteredChanges.findIndex(
+					change => change.letter === mode.letter && change.action === 'add'
+				);
 				if (addIndex !== -1) {
 					filteredChanges.splice(addIndex, 1);
-				} else if (!this._modes.find(currentMode => currentMode.mode.letter === mode.letter)) {
-					continue;
-				} else {
+				} else if (this._modes.find(currentMode => currentMode.mode.letter === mode.letter)) {
 					filteredChanges.push(mode);
+				} else {
+					continue;
 				}
 
 				const setModeIndex = resultingModes.findIndex(currMode => currMode.mode.letter === mode.letter);
@@ -169,41 +164,50 @@ export default class User extends EventEmitter implements ModeHolder {
 		}
 
 		// normalize (sort) modes
-		// tslint:disable-next-line:
 		this._modes = resultingModes.sort(Channel.stateSorter);
 
-		this.sendMessage(MessageTypes.Commands.Mode, {
-			target: this._nick,
-			modes: filteredChanges.sort(Channel.actionSorter).reduce((result, action) => {
-				let [letters, ...params] = result;
-				if (action.action === 'remove') {
-					if (!letters.includes('-')) {
-						letters += '-';
-					}
-				} else if (letters.length === 0) {
-					letters += '+';
-				}
+		this.sendMessage(
+			MessageTypes.Commands.Mode,
+			{
+				target: this.connectionIdentifier,
+				modes: filteredChanges
+					.sort(Channel.actionSorter)
+					.reduce(
+						(result, action) => {
+							let [letters, ...params] = result;
+							if (action.action === 'remove') {
+								if (!letters.includes('-')) {
+									letters += '-';
+								}
+							} else if (letters.length === 0) {
+								letters += '+';
+							}
 
-				letters += action.letter;
+							letters += action.letter;
 
-				return [letters, ...params];
-			}, ['']).join(' ')
-		}, this.prefix);
+							return [letters, ...params];
+						},
+						['']
+					)
+					.join(' ')
+			},
+			this.prefix
+		);
 	}
 
-	addChannel(channel: Channel) {
+	addChannel(channel: Channel): void {
 		this._channels.add(channel);
 	}
 
-	removeChannel(channel: Channel) {
+	removeChannel(channel: Channel): void {
 		this._channels.delete(channel);
 	}
 
-	get channels() {
+	get channels(): Set<Channel> {
 		return new Set<Channel>(this._channels);
 	}
 
-	destroy() {
+	destroy(): boolean {
 		if (!this._destroying) {
 			this._destroying = true;
 			this._socket.removeAllListeners('data');
@@ -216,20 +220,36 @@ export default class User extends EventEmitter implements ModeHolder {
 		return false;
 	}
 
-	writeLine(str: string) {
-		// tslint:disable-next-line:no-console
+	writeLine(str: string): void {
 		console.log(`${this.connectionIdentifier} < ${str}`);
 		this._socket.write(`${str}\r\n`);
 	}
 
-	sendMessage<T extends MessageConstructor>(type: T, params: MessageParams<ConstructedType<T>>, prefix: MessagePrefix = this._server.serverPrefix) {
-		this.writeLine(type.create(params, prefix).toString(true));
+	sendMessage<T extends Message>(
+		type: MessageConstructor<T>,
+		params: Partial<MessageParamValues<T>>,
+		prefix: MessagePrefix = this._server.serverPrefix
+	): void {
+		this.writeLine(createMessage(type, params, prefix).toString(true));
 	}
 
-	sendNumericReply<T extends MessageConstructor<Message<{ me: MessageParam }>>>(type: T, params: Omit<MessageParams<ConstructedType<T>>, 'me'>) {
-		this.writeLine(type.create({
-			me: this.connectionIdentifier,
-			...params
-		}, this._server.serverPrefix).toString(true));
+	sendNumericReply<T extends Message>(type: MessageConstructor<T>, params: Partial<MessageParamValues<T>>): void {
+		this.writeLine(
+			createMessage(
+				type,
+				{
+					me: this.connectionIdentifier,
+					...params
+				},
+				this._server.serverPrefix
+			).toString(true)
+		);
+	}
+
+	private _checkNewRegistration() {
+		if (!this._registered && this._nick && this._userName && this._realName) {
+			this._registered = true;
+			this.emit(this.onRegister);
+		}
 	}
 }

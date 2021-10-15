@@ -1,4 +1,4 @@
-import ModeHandler from '../Modes/ModeHandler';
+import type { ModeHandler } from '../Modes/ModeHandler';
 
 export interface ModeState {
 	mode: ModeHandler;

@@ -1,15 +1,14 @@
+import { MessageTypes } from 'ircv3';
 import CommandHandler from '../CommandHandler';
-import Names from 'ircv3/lib/Message/MessageTypes/Commands/Names';
-import User from '../../User';
-import Server from '../../Server';
-import * as Numerics from 'ircv3/lib/Message/MessageTypes/Numerics';
+import type { User } from '../../User';
+import type { Server } from '../../Server';
 
-export default class NamesHandler extends CommandHandler<Names> {
+export default class NamesHandler extends CommandHandler<MessageTypes.Commands.Names> {
 	constructor() {
-		super(Names);
+		super(MessageTypes.Commands.Names);
 	}
 
-	handleCommand(cmd: Names, user: User, server: Server) {
+	handleCommand(cmd: MessageTypes.Commands.Names, user: User, server: Server): void {
 		user.ifRegistered(() => {
 			// RFC allows to only process the first channel
 			const [channelName] = cmd.params.channel.split(',');
@@ -24,7 +23,7 @@ export default class NamesHandler extends CommandHandler<Names> {
 			} else {
 				// TODO global user list? it doesn't seem to be widely implemented
 			}
-			user.sendNumericReply(Numerics.Reply366EndOfNames, {
+			user.sendNumericReply(MessageTypes.Numerics.Reply366EndOfNames, {
 				channel: channelName || '*',
 				suffix: 'End of /NAMES list'
 			});

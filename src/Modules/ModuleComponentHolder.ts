@@ -1,26 +1,25 @@
-import ModeHandler from '../Modes/ModeHandler';
-import Server from '../Server';
-import CommandHandler from '../Commands/CommandHandler';
+import type { ModeHandler } from '../Modes/ModeHandler';
+import type { Server } from '../Server';
+import type CommandHandler from '../Commands/CommandHandler';
 
 export default class ModuleComponentHolder {
 	private _modes: ModeHandler[] = [];
-	private _commands: CommandHandler[] = [];
+	private readonly _commands: CommandHandler[] = [];
 
-	constructor(private readonly _server: Server) {
-	}
+	constructor(private readonly _server: Server) {}
 
-	addMode(mode: ModeHandler) {
+	addMode(mode: ModeHandler): void {
 		this._server.addMode(mode);
 		this._modes.push(mode);
 	}
 
-	addCommand(command: CommandHandler) {
+	addCommand(command: CommandHandler): void {
 		if (this._server.addCommand(command)) {
 			this._commands.push(command);
 		}
 	}
 
-	removeAll() {
+	removeAll(): void {
 		for (const mode of this._modes) {
 			this._server.removeMode(mode);
 		}

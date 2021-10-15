@@ -1,14 +1,14 @@
+import { MessageTypes } from 'ircv3';
 import CommandHandler from '../CommandHandler';
-import ClientQuit from 'ircv3/lib/Message/MessageTypes/Commands/ClientQuit';
-import User from '../../User';
-import Server from '../../Server';
+import type { User } from '../../User';
+import type { Server } from '../../Server';
 
-export default class ClientQuitHandler extends CommandHandler<ClientQuit> {
+export default class ClientQuitHandler extends CommandHandler<MessageTypes.Commands.ClientQuit> {
 	constructor() {
-		super(ClientQuit);
+		super(MessageTypes.Commands.ClientQuit);
 	}
 
-	handleCommand(cmd: ClientQuit, user: User, server: Server) {
+	handleCommand(cmd: MessageTypes.Commands.ClientQuit, user: User, server: Server): void {
 		server.destroyConnection(user);
 	}
 }

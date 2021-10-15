@@ -1,18 +1,18 @@
-import Module, { ModuleResult } from '../../Module';
-import Channel from '../../../Channel';
-import User from '../../../User';
+import { Module, ModuleResult } from '../../Module';
+import type Channel from '../../../Channel';
+import type { User } from '../../../User';
 import NoExternalMessagesModeHandler from './NoExternalMessagesModeHandler';
-import ModuleComponentHolder from '../../ModuleComponentHolder';
+import type ModuleComponentHolder from '../../ModuleComponentHolder';
 import { MessageTypes } from 'ircv3';
 
 export default class NoExternalMessagesModule extends Module {
 	private readonly _noExternalMessagesMode = new NoExternalMessagesModeHandler();
 
-	init(components: ModuleComponentHolder) {
+	init(components: ModuleComponentHolder): void {
 		components.addMode(this._noExternalMessagesMode);
 	}
 
-	onChannelMessage(channel: Channel, user: User, message: string) {
+	onChannelMessage(channel: Channel, user: User): ModuleResult {
 		if (channel.hasModeSet(this._noExternalMessagesMode) && !channel.containsUser(user)) {
 			user.sendNumericReply(MessageTypes.Numerics.Error404CanNotSendToChan, {
 				channel: channel.name,
@@ -22,9 +22,9 @@ export default class NoExternalMessagesModule extends Module {
 		}
 
 		return ModuleResult.NEXT;
-	};
+	}
 
-	onChannelCreate(channel: Channel, user: User) {
+	onChannelCreate(channel: Channel): ModuleResult {
 		channel.addMode(this._noExternalMessagesMode);
 
 		return ModuleResult.NEXT;
