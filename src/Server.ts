@@ -213,7 +213,7 @@ export class Server {
 			}
 		});
 		user.onRegister(() => {
-			this._nickUserMap.set(user.nick!, user);
+			this._nickUserMap.set(this._caseFoldString(user.nick!), user);
 			user.sendNumericReply(MessageTypes.Numerics.Reply001Welcome, {
 				welcomeText: 'the server welcomes you!'
 			});
@@ -248,10 +248,16 @@ export class Server {
 			this.sendMotd(user);
 		});
 		user.onNickChange(oldNick => {
-			if (oldNick) {
-				this._nickUserMap.delete(oldNick);
+			const newNickCaseFolded = this._caseFoldString(user.nick!);
+			if (!oldNick) {
+				this._nickUserMap.set(newNickCaseFolded, user);
+				return;
 			}
-			this._nickUserMap.set(user.nick!, user);
+			const oldNickCaseFolded = this._caseFoldString(oldNick);
+			if (newNickCaseFolded !== oldNickCaseFolded) {
+				this._nickUserMap.delete(oldNickCaseFolded);
+				this._nickUserMap.set(newNickCaseFolded, user);
+			}
 		});
 		this._users.push(user);
 	}
@@ -349,20 +355,22 @@ export class Server {
 		if (!user.destroy()) {
 			return;
 		}
-		this.broadcastToCommonChannelUsers(user, MessageTypes.Commands.ClientQuit, {
-			message: 'Bye bye!'
-		});
-		for (const channel of user.channels) {
-			this.unlinkUserFromChannel(user, channel);
+		if (user.isRegistered) {
+			this.broadcastToCommonChannelUsers(user, MessageTypes.Commands.ClientQuit, {
+				message: 'Bye bye!'
+			});
+			for (const channel of user.channels) {
+				this.unlinkUserFromChannel(user, channel);
+			}
+			if (user.nick) {
+				this._nickUserMap.delete(this._caseFoldString(user.nick));
+			}
 		}
 		const index = this._users.findIndex(u => u === user);
 		if (index === -1) {
 			console.error(`Could not find index of user ${user.connectionIdentifier}`);
 		} else {
 			this._users.splice(index, 1);
-		}
-		if (user.nick) {
-			this._nickUserMap.delete(user.nick);
 		}
 		console.log(`${user.connectionIdentifier} disconnected. ${this._users.length} remaining.`);
 	}
