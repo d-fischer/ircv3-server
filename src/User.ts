@@ -44,15 +44,15 @@ export class User extends EventEmitter implements ModeHolder {
 		this._modes.push({ mode });
 	}
 
-	setNick(nick: string): NickChangeResult {
-		if (this._server.nickExists(nick)) {
+	setNick(newNick: string): NickChangeResult {
+		if (!this._server.nickChangeAllowed(this._nick, newNick)) {
 			return 'inUse';
 		}
 		// if nick contains an invalid char or only numbers, it fails
-		if (/[^a-zA-Z0-9[\]{}|\\^_-]/.test(nick) || !/[^0-9]/.test(nick)) {
+		if (/[^a-zA-Z0-9[\]{}|\\^_-]/.test(newNick) || !/[^0-9]/.test(newNick)) {
 			return 'invalid';
 		}
-		this._nick = nick;
+		this._nick = newNick;
 		if (!this._registered) {
 			this._checkNewRegistration();
 		}

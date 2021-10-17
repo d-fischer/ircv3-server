@@ -213,7 +213,7 @@ export class Server {
 			}
 		});
 		user.onRegister(() => {
-			this._nickUserMap.set(this._caseFoldString(user.nick!), user);
+			this._nickUserMap.set(Server._caseFoldString(user.nick!), user);
 			user.sendNumericReply(MessageTypes.Numerics.Reply001Welcome, {
 				welcomeText: 'the server welcomes you!'
 			});
@@ -248,12 +248,12 @@ export class Server {
 			this.sendMotd(user);
 		});
 		user.onNickChange(oldNick => {
-			const newNickCaseFolded = this._caseFoldString(user.nick!);
+			const newNickCaseFolded = Server._caseFoldString(user.nick!);
 			if (!oldNick) {
 				this._nickUserMap.set(newNickCaseFolded, user);
 				return;
 			}
-			const oldNickCaseFolded = this._caseFoldString(oldNick);
+			const oldNickCaseFolded = Server._caseFoldString(oldNick);
 			if (newNickCaseFolded !== oldNickCaseFolded) {
 				this._nickUserMap.delete(oldNickCaseFolded);
 				this._nickUserMap.set(newNickCaseFolded, user);
@@ -271,7 +271,7 @@ export class Server {
 	joinChannel(user: User, channel: string | Channel): void {
 		let isFirst = false;
 		if (typeof channel === 'string') {
-			const foldedName = this._caseFoldString(channel);
+			const foldedName = Server._caseFoldString(channel);
 			let channelObject = this._channels.get(foldedName);
 			if (!channelObject) {
 				isFirst = true;
@@ -284,7 +284,7 @@ export class Server {
 		const res = this.callHook('channelJoin', channel, user);
 		if (res === ModuleResult.DENY) {
 			if (isFirst) {
-				this._channels.delete(this._caseFoldString(channel.name));
+				this._channels.delete(Server._caseFoldString(channel.name));
 			}
 			return;
 		}
@@ -340,15 +340,22 @@ export class Server {
 	}
 
 	nickExists(nick: string): boolean {
-		return this._nickUserMap.has(this._caseFoldString(nick));
+		return this._nickUserMap.has(Server._caseFoldString(nick));
+	}
+
+	nickChangeAllowed(oldNick: string | undefined, newNick: string): boolean {
+		return (
+			(oldNick && Server._caseFoldString(oldNick) === Server._caseFoldString(newNick)) ||
+			!this.nickExists(newNick)
+		);
 	}
 
 	getUserByNick(nick: string): User | undefined {
-		return this._nickUserMap.get(this._caseFoldString(nick));
+		return this._nickUserMap.get(Server._caseFoldString(nick));
 	}
 
 	getChannelByName(name: string): Channel | undefined {
-		return this._channels.get(this._caseFoldString(name));
+		return this._channels.get(Server._caseFoldString(name));
 	}
 
 	destroyConnection(user: User): void {
@@ -363,7 +370,7 @@ export class Server {
 				this.unlinkUserFromChannel(user, channel);
 			}
 			if (user.nick) {
-				this._nickUserMap.delete(this._caseFoldString(user.nick));
+				this._nickUserMap.delete(Server._caseFoldString(user.nick));
 			}
 		}
 		const index = this._users.findIndex(u => u === user);
@@ -393,7 +400,7 @@ export class Server {
 			this.unlinkUserFromChannel(user, channel);
 		}
 
-		this._channels.delete(this._caseFoldString(channel.name));
+		this._channels.delete(Server._caseFoldString(channel.name));
 	}
 
 	broadcastToCommonChannelUsers<T extends MessageConstructor>(
@@ -485,7 +492,7 @@ export class Server {
 		return result;
 	}
 
-	private _caseFoldString(str: string) {
+	private static _caseFoldString(str: string) {
 		return str.toLowerCase();
 	}
 }
