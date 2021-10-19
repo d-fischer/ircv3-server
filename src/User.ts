@@ -1,4 +1,3 @@
-import type { Listener } from '@d-fischer/typed-event-emitter';
 import { EventEmitter } from '@d-fischer/typed-event-emitter';
 import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
 import { createMessage, MessageTypes } from 'ircv3';
@@ -21,9 +20,9 @@ export class User extends EventEmitter implements ModeHolder {
 	private _modes: ModeState[] = [];
 	private readonly _channels = new Set<Channel>();
 
-	onLine: (handler: (line: string) => void) => Listener = this.registerEvent();
-	onRegister: (handler: () => void) => Listener = this.registerEvent();
-	onNickChange: (handler: (oldNick?: string) => void) => Listener = this.registerEvent();
+	onLine = this.registerEvent<[line: string]>();
+	onRegister = this.registerEvent<[]>();
+	onNickChange = this.registerEvent<[oldNick?: string]>();
 
 	constructor(protected _server: Server, protected _socket: net.Socket) {
 		super();
