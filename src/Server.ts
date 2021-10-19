@@ -123,6 +123,10 @@ export class Server {
 		this.addCommand(new ChannelKickHandler());
 	}
 
+	get channels(): Map<string, Channel> {
+		return new Map(this._channels);
+	}
+
 	get supportedChannelModes(): SupportedModesByType {
 		return {
 			prefix: this._prefixes.reduceRight((result, prefix) => result + prefix.modeChar, ''),
