@@ -1,8 +1,8 @@
 import { Module } from '../../Module';
-import type ModuleComponentHolder from '../../ModuleComponentHolder';
-import ListCommandHandler from './ListCommandHandler';
+import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
+import { ListCommandHandler } from './ListCommandHandler';
 
-export default class ListModule extends Module {
+export class ListModule extends Module {
 	init(components: ModuleComponentHolder): void {
 		components.addCommand(new ListCommandHandler());
 	}

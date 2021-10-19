@@ -1,13 +1,13 @@
 import type { Message, SingleMode } from 'ircv3';
 import { MessageTypes, prefixToString } from 'ircv3';
 import type { ModeHandler } from './Modes/ModeHandler';
-import type ModeHolder from './Modes/ModeHolder';
+import type { ModeHolder } from './Modes/ModeHolder';
 import type { InternalAccessLevelDefinition, Server } from './Server';
 import type { ModeState } from './Toolkit/ModeTools';
 import { sortStringByOrder } from './Toolkit/StringTools';
 import type { User } from './User';
 
-export default class Channel implements ModeHolder {
+export class Channel implements ModeHolder {
 	private _modes: ModeState[] = [];
 	private _topic = '';
 	private _topicTime = 0;

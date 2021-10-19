@@ -1,11 +1,11 @@
 import { Module, ModuleResult } from '../../Module';
-import type Channel from '../../../Channel';
+import type { Channel } from '../../../Channel';
 import type { User } from '../../../User';
-import NoExternalMessagesModeHandler from './NoExternalMessagesModeHandler';
-import type ModuleComponentHolder from '../../ModuleComponentHolder';
+import { NoExternalMessagesModeHandler } from './NoExternalMessagesModeHandler';
+import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 import { MessageTypes } from 'ircv3';
 
-export default class NoExternalMessagesModule extends Module {
+export class NoExternalMessagesModule extends Module {
 	private readonly _noExternalMessagesMode = new NoExternalMessagesModeHandler();
 
 	init(components: ModuleComponentHolder): void {

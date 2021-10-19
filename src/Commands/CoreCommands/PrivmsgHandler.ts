@@ -1,10 +1,10 @@
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 import { isChannel, MessageTypes } from 'ircv3';
 import { ModuleResult } from '../../Modules/Module';
 
-export default class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.PrivateMessage> {
+export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.PrivateMessage> {
 	constructor() {
 		super(MessageTypes.Commands.PrivateMessage);
 	}

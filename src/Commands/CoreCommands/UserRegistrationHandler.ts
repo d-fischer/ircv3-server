@@ -1,8 +1,8 @@
 import { MessageTypes } from 'ircv3';
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 
-export default class UserRegistrationHandler extends CommandHandler<MessageTypes.Commands.UserRegistration> {
+export class UserRegistrationHandler extends CommandHandler<MessageTypes.Commands.UserRegistration> {
 	constructor() {
 		super(MessageTypes.Commands.UserRegistration);
 	}

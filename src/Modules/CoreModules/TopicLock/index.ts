@@ -1,11 +1,11 @@
 import { Module, ModuleResult } from '../../Module';
 import { MessageTypes } from 'ircv3';
-import type Channel from '../../../Channel';
+import type { Channel } from '../../../Channel';
 import type { User } from '../../../User';
-import TopicLockModeHandler from './TopicLockModeHandler';
-import type ModuleComponentHolder from '../../ModuleComponentHolder';
+import { TopicLockModeHandler } from './TopicLockModeHandler';
+import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 
-export default class TopicLockModule extends Module {
+export class TopicLockModule extends Module {
 	private readonly _topicLockMode = new TopicLockModeHandler();
 
 	init(components: ModuleComponentHolder): void {

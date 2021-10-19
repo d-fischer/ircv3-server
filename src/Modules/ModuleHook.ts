@@ -1,6 +1,6 @@
 import type { SingleMode } from 'ircv3';
-import type Channel from '../Channel';
-import type ModeHolder from '../Modes/ModeHolder';
+import type { Channel } from '../Channel';
+import type { ModeHolder } from '../Modes/ModeHolder';
 import type { User } from '../User';
 import type { Module, ModuleResult } from './Module';
 

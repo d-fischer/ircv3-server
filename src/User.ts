@@ -2,9 +2,9 @@ import { EventEmitter } from '@d-fischer/typed-event-emitter';
 import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
 import { createMessage, MessageTypes } from 'ircv3';
 import type * as net from 'net';
-import Channel from './Channel';
+import { Channel } from './Channel';
 import type { ModeHandler } from './Modes/ModeHandler';
-import type ModeHolder from './Modes/ModeHolder';
+import type { ModeHolder } from './Modes/ModeHolder';
 import type { Server } from './Server';
 import type { ModeState } from './Toolkit/ModeTools';
 

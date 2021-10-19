@@ -1,10 +1,10 @@
 import { MessageTypes } from 'ircv3';
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 import { ModuleResult } from '../../Modules/Module';
 
-export default class TopicHandler extends CommandHandler<MessageTypes.Commands.Topic> {
+export class TopicHandler extends CommandHandler<MessageTypes.Commands.Topic> {
 	constructor() {
 		super(MessageTypes.Commands.Topic);
 	}

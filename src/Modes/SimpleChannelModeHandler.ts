@@ -1,8 +1,8 @@
-import SimpleModeHandler from './SimpleModeHandler';
+import { SimpleModeHandler } from './SimpleModeHandler';
 import type { User } from '../User';
-import type Channel from '../Channel';
+import type { Channel } from '../Channel';
 
-export default class SimpleChannelModeHandler extends SimpleModeHandler {
+export abstract class SimpleChannelModeHandler extends SimpleModeHandler {
 	constructor(name: string, letter: string, private readonly _minAccess?: string) {
 		super(name, letter, 'channel');
 	}

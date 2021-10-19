@@ -1,5 +1,5 @@
 import type { Server } from '../Server';
-import ModuleComponentHolder from './ModuleComponentHolder';
+import { ModuleComponentHolder } from './ModuleComponentHolder';
 
 export enum ModuleResult {
 	ALLOW,

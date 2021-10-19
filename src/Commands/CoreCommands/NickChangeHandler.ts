@@ -1,10 +1,10 @@
 import { MessageTypes } from 'ircv3';
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import { assertNever } from '../../Toolkit/TypeTools';
 import type { Server } from '../../Server';
 
-export default class NickChangeHandler extends CommandHandler<MessageTypes.Commands.NickChange> {
+export class NickChangeHandler extends CommandHandler<MessageTypes.Commands.NickChange> {
 	constructor() {
 		super(MessageTypes.Commands.NickChange);
 	}

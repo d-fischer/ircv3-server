@@ -1,6 +1,6 @@
 import { assertNever } from '../Toolkit/TypeTools';
 import type { User } from '../User';
-import type ModeHolder from './ModeHolder';
+import type { ModeHolder } from './ModeHolder';
 import type { Server } from '../Server';
 
 export type ModeParamSpec = 'never' | 'setOnly' | 'always';

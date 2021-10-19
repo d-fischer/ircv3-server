@@ -1,6 +1,6 @@
-import SimpleChannelModeHandler from '../../../Modes/SimpleChannelModeHandler';
+import { SimpleChannelModeHandler } from '../../../Modes/SimpleChannelModeHandler';
 
-export default class InviteOnlyModeHandler extends SimpleChannelModeHandler {
+export class InviteOnlyModeHandler extends SimpleChannelModeHandler {
 	constructor() {
 		super('inviteOnly', 'i', 'op');
 	}

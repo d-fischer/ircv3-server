@@ -1,9 +1,9 @@
 import { Module, ModuleResult } from '../../Module';
-import type ModuleComponentHolder from '../../ModuleComponentHolder';
-import InvisibleModeHandler from './InvisibleModeHandler';
+import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
+import { InvisibleModeHandler } from './InvisibleModeHandler';
 import type { User } from '../../../User';
 
-export default class InvisibleModule extends Module {
+export class InvisibleModule extends Module {
 	private readonly _invisibleMode = new InvisibleModeHandler();
 
 	init(components: ModuleComponentHolder): void {

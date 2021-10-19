@@ -1,9 +1,9 @@
 import { MessageTypes } from 'ircv3';
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 
-export default class NamesHandler extends CommandHandler<MessageTypes.Commands.Names> {
+export class NamesHandler extends CommandHandler<MessageTypes.Commands.Names> {
 	constructor() {
 		super(MessageTypes.Commands.Names);
 	}

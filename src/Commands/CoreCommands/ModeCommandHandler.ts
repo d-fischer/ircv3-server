@@ -1,10 +1,10 @@
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 import { MessageTypes, UnknownChannelModeCharError } from 'ircv3';
 import { partition } from '../../Toolkit/ArrayTools';
 
-export default class ModeCommandHandler extends CommandHandler<MessageTypes.Commands.Mode> {
+export class ModeCommandHandler extends CommandHandler<MessageTypes.Commands.Mode> {
 	constructor() {
 		super(MessageTypes.Commands.Mode);
 	}

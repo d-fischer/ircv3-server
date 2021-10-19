@@ -2,7 +2,7 @@ import type { Message, MessageConstructor } from 'ircv3';
 import type { User } from '../User';
 import type { Server } from '../Server';
 
-export default abstract class CommandHandler<T extends Message = Message> {
+export abstract class CommandHandler<T extends Message = Message> {
 	private readonly _command: string;
 
 	constructor(type: MessageConstructor<T>) {

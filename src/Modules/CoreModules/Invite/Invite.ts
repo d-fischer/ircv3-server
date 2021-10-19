@@ -1,7 +1,7 @@
 import type { User } from '../../../User';
-import type Channel from '../../../Channel';
+import type { Channel } from '../../../Channel';
 
-export default class Invite {
+export class Invite {
 	constructor(private readonly _user: User, private readonly _channel: Channel, private readonly _byUser: User) {}
 
 	get user(): User {

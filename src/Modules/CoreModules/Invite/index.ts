@@ -1,13 +1,13 @@
 import { MessageTypes } from 'ircv3';
 import { Module, ModuleResult } from '../../Module';
-import InviteOnlyModeHandler from './InviteOnlyModeHandler';
-import type ModuleComponentHolder from '../../ModuleComponentHolder';
-import InviteCommandHandler from './InviteCommandHandler';
-import type Invite from './Invite';
+import { InviteOnlyModeHandler } from './InviteOnlyModeHandler';
+import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
+import { InviteCommandHandler } from './InviteCommandHandler';
+import type { Invite } from './Invite';
 import type { User } from '../../../User';
-import type Channel from '../../../Channel';
+import type { Channel } from '../../../Channel';
 
-export default class InviteModule extends Module {
+export class InviteModule extends Module {
 	private readonly _invites = new Set<Invite>();
 	private readonly _invitesByUser = new Map<User, Set<Invite>>();
 	private readonly _inviteOnlyMode = new InviteOnlyModeHandler();

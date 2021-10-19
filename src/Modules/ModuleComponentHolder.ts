@@ -1,11 +1,11 @@
 import type { ModeHandler } from '../Modes/ModeHandler';
 import type { Server } from '../Server';
-import type CommandHandler from '../Commands/CommandHandler';
+import type { CommandHandler } from '../Commands/CommandHandler';
 import type { Module } from './Module';
 import { ModuleHook } from './ModuleHook';
 import type { ModuleHookTypes } from './ModuleHook';
 
-export default class ModuleComponentHolder {
+export class ModuleComponentHolder {
 	private _modes: ModeHandler[] = [];
 	private readonly _commands: CommandHandler[] = [];
 	private readonly _hooks: Array<ModuleHook<never>> = [];

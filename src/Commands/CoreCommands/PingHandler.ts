@@ -1,9 +1,9 @@
 import { MessageTypes } from 'ircv3';
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 
-export default class PingHandler extends CommandHandler<MessageTypes.Commands.Ping> {
+export class PingHandler extends CommandHandler<MessageTypes.Commands.Ping> {
 	constructor() {
 		super(MessageTypes.Commands.Ping);
 	}

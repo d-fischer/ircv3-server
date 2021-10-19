@@ -1,9 +1,9 @@
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 import { isChannel, MessageTypes } from 'ircv3';
 
-export default class ChannelPartHandler extends CommandHandler<MessageTypes.Commands.ChannelPart> {
+export class ChannelPartHandler extends CommandHandler<MessageTypes.Commands.ChannelPart> {
 	constructor() {
 		super(MessageTypes.Commands.ChannelPart);
 	}

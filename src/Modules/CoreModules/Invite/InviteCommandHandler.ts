@@ -1,12 +1,12 @@
 import { MessageTypes } from 'ircv3';
-import CommandHandler from '../../../Commands/CommandHandler';
+import { CommandHandler } from '../../../Commands/CommandHandler';
 import type { User } from '../../../User';
 import type { Server } from '../../../Server';
-import type InviteOnlyModeHandler from './InviteOnlyModeHandler';
-import Invite from './Invite';
-import type InviteModule from './index';
+import type { InviteOnlyModeHandler } from './InviteOnlyModeHandler';
+import { Invite } from './Invite';
+import type { InviteModule } from './index';
 
-export default class InviteCommandHandler extends CommandHandler<MessageTypes.Commands.ChannelInvite> {
+export class InviteCommandHandler extends CommandHandler<MessageTypes.Commands.ChannelInvite> {
 	constructor(private readonly _inviteOnlyMode: InviteOnlyModeHandler, private readonly _inviteModule: InviteModule) {
 		super(MessageTypes.Commands.ChannelInvite);
 	}

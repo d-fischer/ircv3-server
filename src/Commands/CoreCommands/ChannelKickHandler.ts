@@ -1,9 +1,9 @@
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 import { MessageTypes } from 'ircv3';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 
-export default class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.ChannelKick> {
+export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.ChannelKick> {
 	constructor() {
 		super(MessageTypes.Commands.ChannelKick);
 	}

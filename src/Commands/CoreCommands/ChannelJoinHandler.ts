@@ -1,9 +1,9 @@
 import { isChannel, MessageTypes } from 'ircv3';
 import type { Server } from '../../Server';
 import type { User } from '../../User';
-import CommandHandler from '../CommandHandler';
+import { CommandHandler } from '../CommandHandler';
 
-export default class ChannelJoinHandler extends CommandHandler<MessageTypes.Commands.ChannelJoin> {
+export class ChannelJoinHandler extends CommandHandler<MessageTypes.Commands.ChannelJoin> {
 	constructor() {
 		super(MessageTypes.Commands.ChannelJoin);
 	}
