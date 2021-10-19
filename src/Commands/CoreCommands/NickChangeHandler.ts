@@ -34,15 +34,15 @@ export default class NickChangeHandler extends CommandHandler<MessageTypes.Comma
 			}
 			case 'ok': {
 				if (registered) {
-					server.broadcastToCommonChannelUsers(
-						user,
+					const msg = server.createMessage(
 						MessageTypes.Commands.NickChange,
 						{
 							nick: newNick
 						},
-						true,
 						oldPrefix
 					);
+					user.sendMessage(msg);
+					server.broadcastToCommonChannelUsers(user, msg);
 				}
 				break;
 			}

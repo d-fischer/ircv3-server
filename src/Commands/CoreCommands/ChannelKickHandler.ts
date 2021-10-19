@@ -64,13 +64,15 @@ export default class ChannelKickHandler extends CommandHandler<MessageTypes.Comm
 		}
 
 		channel.broadcastMessage(
-			MessageTypes.Commands.ChannelKick,
-			{
-				channel: channel.name,
-				target: victim.nick,
-				comment
-			},
-			user.prefix
+			server.createMessage(
+				MessageTypes.Commands.ChannelKick,
+				{
+					channel: channel.name,
+					target: victim.nick,
+					comment
+				},
+				user.prefix
+			)
 		);
 		server.unlinkUserFromChannel(victim, channel);
 	}

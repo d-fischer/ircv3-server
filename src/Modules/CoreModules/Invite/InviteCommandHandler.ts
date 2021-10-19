@@ -64,7 +64,7 @@ export default class InviteCommandHandler extends CommandHandler<MessageTypes.Co
 			nick: target.nick
 		});
 
-		target.sendMessage(
+		const msg = server.createMessage(
 			MessageTypes.Commands.ChannelInvite,
 			{
 				channel: channel.name,
@@ -72,5 +72,6 @@ export default class InviteCommandHandler extends CommandHandler<MessageTypes.Co
 			},
 			user.prefix
 		);
+		target.sendMessage(msg);
 	}
 }

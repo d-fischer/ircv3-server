@@ -9,11 +9,13 @@ export default class PingHandler extends CommandHandler<MessageTypes.Commands.Pi
 	}
 
 	handleCommand(cmd: MessageTypes.Commands.Ping, user: User, server: Server): void {
-		user.ifRegistered(() =>
-			user.sendMessage(MessageTypes.Commands.Pong, {
+		user.ifRegistered(() => {
+			const msg = server.createMessage(MessageTypes.Commands.Pong, {
 				server: server.serverAddress,
 				message: cmd.params.message
-			})
-		);
+			});
+
+			user.sendMessage(msg);
+		});
 	}
 }

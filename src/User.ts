@@ -166,7 +166,7 @@ export class User extends EventEmitter implements ModeHolder {
 		// normalize (sort) modes
 		this._modes = resultingModes.sort(Channel.stateSorter);
 
-		this.sendMessage(
+		const msg = this._server.createMessage(
 			MessageTypes.Commands.Mode,
 			{
 				target: this.connectionIdentifier,
@@ -193,6 +193,8 @@ export class User extends EventEmitter implements ModeHolder {
 			},
 			this.prefix
 		);
+
+		this.sendMessage(msg);
 	}
 
 	addChannel(channel: Channel): void {
@@ -225,12 +227,8 @@ export class User extends EventEmitter implements ModeHolder {
 		this._socket.write(`${str}\r\n`);
 	}
 
-	sendMessage<T extends Message>(
-		type: MessageConstructor<T>,
-		params: Partial<MessageParamValues<T>>,
-		prefix: MessagePrefix = this._server.serverPrefix
-	): void {
-		this.writeLine(createMessage(type, params, prefix, undefined, undefined, true).toString(true));
+	sendMessage(msg: Message): void {
+		this.writeLine(msg.toString(true));
 	}
 
 	sendNumericReply<T extends Message>(type: MessageConstructor<T>, params: Partial<MessageParamValues<T>>): void {

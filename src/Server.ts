@@ -1,12 +1,18 @@
-import type { ConstructedType } from '@d-fischer/shared-utils';
 import type {
 	AccessLevelDefinition,
+	Message,
 	MessageConstructor,
 	MessageParamValues,
 	MessagePrefix,
 	SupportedModesByType
 } from 'ircv3';
-import { MessageTypes, NotEnoughParametersError, ParameterRequirementMismatchError, parseMessage } from 'ircv3';
+import {
+	createMessage,
+	MessageTypes,
+	NotEnoughParametersError,
+	ParameterRequirementMismatchError,
+	parseMessage
+} from 'ircv3';
 import * as net from 'net';
 import Channel from './Channel';
 import type CommandHandler from './Commands/CommandHandler';
@@ -297,11 +303,13 @@ export class Server {
 		channel.addUser(user, isFirst);
 
 		channel.broadcastMessage(
-			MessageTypes.Commands.ChannelJoin,
-			{
-				channel: channel.name
-			},
-			user.prefix
+			this.createMessage(
+				MessageTypes.Commands.ChannelJoin,
+				{
+					channel: channel.name
+				},
+				user.prefix
+			)
 		);
 		channel.sendTopic(user, false);
 
@@ -329,11 +337,13 @@ export class Server {
 		}
 
 		channel.broadcastMessage(
-			MessageTypes.Commands.ChannelPart,
-			{
-				channel: channel.name
-			},
-			user.prefix
+			this.createMessage(
+				MessageTypes.Commands.ChannelPart,
+				{
+					channel: channel.name
+				},
+				user.prefix
+			)
 		);
 
 		this.unlinkUserFromChannel(user, channel);
@@ -363,9 +373,12 @@ export class Server {
 			return;
 		}
 		if (user.isRegistered) {
-			this.broadcastToCommonChannelUsers(user, MessageTypes.Commands.ClientQuit, {
-				message: 'Bye bye!'
-			});
+			this.broadcastToCommonChannelUsers(
+				user,
+				this.createMessage(MessageTypes.Commands.ClientQuit, {
+					message: 'Bye bye!'
+				})
+			);
 			for (const channel of user.channels) {
 				this.unlinkUserFromChannel(user, channel);
 			}
@@ -391,37 +404,40 @@ export class Server {
 	destroyChannel(channel: Channel): void {
 		// usually, this should only happen when a channel is empty, but we kick everyone just in case
 		for (const user of channel.users) {
-			user.sendMessage(MessageTypes.Commands.ChannelKick, {
+			const msg = this.createMessage(MessageTypes.Commands.ChannelKick, {
 				// people in channels should have a nick
 				target: user.nick!,
 				channel: channel.name,
 				comment: 'Channel is being destroyed'
 			});
+			user.sendMessage(msg);
 			this.unlinkUserFromChannel(user, channel);
 		}
 
 		this._channels.delete(Server._caseFoldString(channel.name));
 	}
 
-	broadcastToCommonChannelUsers<T extends MessageConstructor>(
-		user: User,
-		type: T,
-		params: MessageParamValues<ConstructedType<T>>,
-		includeSelf: boolean = false,
-		prefix: MessagePrefix = user.prefix
-	): void {
+	createMessage<T extends Message>(
+		type: MessageConstructor<T>,
+		params: Partial<MessageParamValues<T>>,
+		prefix: MessagePrefix = this.serverPrefix
+	): T {
+		return createMessage(type, params, prefix, undefined, undefined, true);
+	}
+
+	broadcastToCommonChannelUsers(user: User, msg: Message): void {
 		const commonUsers = new Set<User>();
 
 		for (const channel of user.channels) {
 			for (const commonUser of channel.users) {
-				if (includeSelf || commonUser !== user) {
+				if (commonUser !== user) {
 					commonUsers.add(commonUser);
 				}
 			}
 		}
 
 		for (const commonUser of commonUsers) {
-			commonUser.sendMessage(type, params, prefix);
+			commonUser.sendMessage(msg);
 		}
 	}
 

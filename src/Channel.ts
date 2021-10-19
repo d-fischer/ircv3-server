@@ -1,4 +1,4 @@
-import type { MessageConstructor, MessageParamValues, MessagePrefix, SingleMode, Message } from 'ircv3';
+import type { Message, SingleMode } from 'ircv3';
 import { MessageTypes, prefixToString } from 'ircv3';
 import type { ModeHandler } from './Modes/ModeHandler';
 import type ModeHolder from './Modes/ModeHolder';
@@ -209,35 +209,37 @@ export default class Channel implements ModeHolder {
 		this._userAccess = resultingAccess;
 
 		this.broadcastMessage(
-			MessageTypes.Commands.Mode,
-			{
-				target: this._name,
-				modes: filteredChanges
-					.sort(Channel.actionSorter)
-					.reduce(
-						(result, action) => {
-							let [letters, ...params] = result;
-							if (action.action === 'remove') {
-								if (!letters.includes('-')) {
-									letters += '-';
+			this._server.createMessage(
+				MessageTypes.Commands.Mode,
+				{
+					target: this._name,
+					modes: filteredChanges
+						.sort(Channel.actionSorter)
+						.reduce(
+							(result, action) => {
+								let [letters, ...params] = result;
+								if (action.action === 'remove') {
+									if (!letters.includes('-')) {
+										letters += '-';
+									}
+								} else if (letters.length === 0) {
+									letters += '+';
 								}
-							} else if (letters.length === 0) {
-								letters += '+';
-							}
 
-							letters += action.letter;
+								letters += action.letter;
 
-							if (action.param === undefined) {
-								return [letters, ...params];
-							} else {
-								return [letters, ...params, action.param];
-							}
-						},
-						['']
-					)
-					.join(' ')
-			},
-			source.prefix
+								if (action.param === undefined) {
+									return [letters, ...params];
+								} else {
+									return [letters, ...params, action.param];
+								}
+							},
+							['']
+						)
+						.join(' ')
+				},
+				source.prefix
+			)
 		);
 	}
 
@@ -282,12 +284,14 @@ export default class Channel implements ModeHolder {
 		this._topicSetter = prefixToString(user.prefix);
 
 		this.broadcastMessage(
-			MessageTypes.Commands.Topic,
-			{
-				channel: this.name,
-				newTopic: newTopic
-			},
-			user.prefix
+			this._server.createMessage(
+				MessageTypes.Commands.Topic,
+				{
+					channel: this.name,
+					newTopic: newTopic
+				},
+				user.prefix
+			)
 		);
 	}
 
@@ -330,15 +334,10 @@ export default class Channel implements ModeHolder {
 		);
 	}
 
-	broadcastMessage<T extends Message>(
-		type: MessageConstructor<T>,
-		params: Partial<MessageParamValues<T>>,
-		prefix: MessagePrefix,
-		exceptUser?: User
-	): void {
+	broadcastMessage(msg: Message, exceptUser?: User): void {
 		for (const user of this.users) {
 			if (user !== exceptUser) {
-				user.sendMessage(type, params, prefix);
+				user.sendMessage(msg);
 			}
 		}
 	}

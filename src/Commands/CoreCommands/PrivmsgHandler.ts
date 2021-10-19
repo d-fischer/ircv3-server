@@ -19,12 +19,14 @@ export default class PrivmsgHandler extends CommandHandler<MessageTypes.Commands
 					const result = server.callHook('channelMessage', channel, user, cmd.params.content);
 					if (result !== ModuleResult.DENY) {
 						channel.broadcastMessage(
-							MessageTypes.Commands.PrivateMessage,
-							{
-								target: channel.name,
-								content: cmd.params.content
-							},
-							user.prefix,
+							server.createMessage(
+								MessageTypes.Commands.PrivateMessage,
+								{
+									target: channel.name,
+									content: cmd.params.content
+								},
+								user.prefix
+							),
 							user
 						);
 					}
@@ -38,7 +40,7 @@ export default class PrivmsgHandler extends CommandHandler<MessageTypes.Commands
 				const otherUser = server.getUserByNick(cmd.params.target);
 
 				if (otherUser) {
-					otherUser.sendMessage(
+					const msg = server.createMessage(
 						MessageTypes.Commands.PrivateMessage,
 						{
 							target: otherUser.nick,
@@ -46,6 +48,8 @@ export default class PrivmsgHandler extends CommandHandler<MessageTypes.Commands
 						},
 						user.prefix
 					);
+
+					otherUser.sendMessage(msg);
 				} else {
 					user.sendNumericReply(MessageTypes.Numerics.Error401NoSuchNick, {
 						nick: cmd.params.target,
