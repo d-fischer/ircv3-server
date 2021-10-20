@@ -13,7 +13,7 @@ export class UserHostCommandHandler extends CommandHandler<MessageTypes.Commands
 			.filter(nick => server.nickExists(nick))
 			.map(nick => {
 				const queriedUser = server.getUserByNick(nick)!;
-				const hostName = queriedUser === user ? queriedUser.ipAddress : queriedUser.prefix.host!;
+				const hostName = queriedUser === user ? queriedUser.ipAddress : queriedUser.publicHostName;
 				// TODO use - for away users
 				return `${nick}=+${queriedUser.prefix.user!}@${hostName}`;
 			})

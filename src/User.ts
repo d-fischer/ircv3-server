@@ -1,4 +1,5 @@
 import { EventEmitter } from '@d-fischer/typed-event-emitter';
+import { promises as dns, NODATA, NOTFOUND } from 'dns';
 import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
 import { createMessage, MessageTypes } from 'ircv3';
 import type * as net from 'net';
@@ -13,9 +14,12 @@ type NickChangeResult = 'ok' | 'invalid' | 'inUse';
 export class User extends EventEmitter implements ModeHolder {
 	private _nick?: string;
 	private _userName?: string;
+	private _hostName: string;
 	private _realName?: string;
-	private _registered: boolean = false;
-	private _destroying: boolean = false;
+
+	private _hostIpResolved: boolean | null = null;
+	private _registered = false;
+	private _destroying = false;
 
 	private _modes: ModeState[] = [];
 	private readonly _channels = new Set<Channel>();
@@ -37,6 +41,31 @@ export class User extends EventEmitter implements ModeHolder {
 		});
 		_socket.on('close', () => this._server.destroyConnection(this));
 		_socket.on('error', () => this._server.destroyConnection(this));
+		this._hostName = this._socket.remoteAddress!;
+	}
+
+	async resolveUserIp(): Promise<boolean> {
+		if (this._hostIpResolved !== null) {
+			return this._hostIpResolved;
+		}
+		let result = false;
+		const ip = this._socket.remoteAddress!;
+		try {
+			const results = await dns.reverse(ip);
+			if (results.length) {
+				this._hostName = results[0];
+				result = true;
+			}
+		} catch (e: unknown) {
+			if (User._isDnsError(e)) {
+				if (e.code !== NODATA && e.code !== NOTFOUND) {
+					console.warn(`Error resolving IP ${ip}: ${e.code ?? 'no code'} (${e.message})`);
+				}
+			}
+		}
+		this._hostIpResolved = result;
+		this._checkNewRegistration();
+		return result;
 	}
 
 	addMode(mode: ModeHandler): void {
@@ -76,6 +105,11 @@ export class User extends EventEmitter implements ModeHolder {
 		return this._userName;
 	}
 
+	get publicHostName(): string {
+		// TODO cloaking?
+		return this._hostName;
+	}
+
 	get realName(): string | undefined {
 		return this._realName;
 	}
@@ -92,7 +126,7 @@ export class User extends EventEmitter implements ModeHolder {
 		return {
 			nick: this._nick!,
 			user: this._userName!,
-			host: 'me.com'
+			host: this.publicHostName
 		};
 	}
 
@@ -255,9 +289,13 @@ export class User extends EventEmitter implements ModeHolder {
 	}
 
 	private _checkNewRegistration() {
-		if (!this._registered && this._nick && this._userName && this._realName) {
+		if (!this._registered && this._nick && this._userName && this._realName && this._hostIpResolved !== null) {
 			this._registered = true;
 			this.emit(this.onRegister);
 		}
+	}
+
+	private static _isDnsError(e: unknown): e is NodeJS.ErrnoException {
+		return e instanceof Error && 'code' in e;
 	}
 }

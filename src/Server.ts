@@ -50,7 +50,7 @@ export class Server {
 	private readonly _channels = new Map<string, Channel>();
 	private readonly _commands = new Map<string, CommandHandler>();
 
-	private readonly _netServer = net.createServer(socket => this.initClientConnection(socket));
+	private readonly _netServer = net.createServer(async socket => await this.initClientConnection(socket));
 	private readonly _startupTime = new Date();
 
 	private readonly _hooksByType = new Map(
@@ -175,7 +175,7 @@ export class Server {
 		};
 	}
 
-	initClientConnection(socket: net.Socket): void {
+	async initClientConnection(socket: net.Socket): Promise<void> {
 		const user = new User(this, socket);
 		user.onLine(line => {
 			try {
@@ -270,6 +270,7 @@ export class Server {
 			}
 		});
 		this._users.push(user);
+		await user.resolveUserIp();
 	}
 
 	sendMotd(user: User): void {
