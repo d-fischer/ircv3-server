@@ -97,7 +97,7 @@ export class User extends EventEmitter implements ModeHolder {
 	}
 
 	get modes(): ModeState[] {
-		return this._modes;
+		return Array.from(this._modes);
 	}
 
 	get modesAsString(): string {
@@ -106,6 +106,10 @@ export class User extends EventEmitter implements ModeHolder {
 
 	get ipAddress(): string {
 		return this._socket.remoteAddress!;
+	}
+
+	hasMode(letter: string): boolean {
+		return this._modes.some(m => m.mode.letter === letter);
 	}
 
 	ifRegistered(cb: () => void): void {

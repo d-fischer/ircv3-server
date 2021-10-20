@@ -244,10 +244,14 @@ export class Channel implements ModeHolder {
 	}
 
 	sendNames(user: User): void {
+		// TODO only set allPrefixes to true if indicated by the user
+		const prefixedNicks = this._userAccess.has(user)
+			? this.getPrefixedNicks(true)
+			: this.getPrefixedNicks(true, u => !u.hasMode('i'));
 		user.sendNumericReply(MessageTypes.Numerics.Reply353NamesReply, {
 			channelType: '=',
 			channel: this.name,
-			names: this.getPrefixedNicks(true).join(' ')
+			names: prefixedNicks.join(' ')
 		});
 		user.sendNumericReply(MessageTypes.Numerics.Reply366EndOfNames, {
 			channel: this.name,
@@ -328,10 +332,12 @@ export class Channel implements ModeHolder {
 		return highestAccess >= necessaryAccess;
 	}
 
-	getPrefixedNicks(allPrefixes: boolean): string[] {
-		return Array.from(this._userAccess.entries()).map(([user, prefixes]) =>
-			this._prefixNick(user.nick!, prefixes, allPrefixes)
-		);
+	getPrefixedNicks(allPrefixes: boolean, userFilter?: (u: User) => boolean): string[] {
+		let entries = Array.from(this._userAccess.entries());
+		if (userFilter) {
+			entries = entries.filter(([u]) => userFilter(u));
+		}
+		return entries.map(([user, prefixes]) => this._prefixNick(user.nick!, prefixes, allPrefixes));
 	}
 
 	broadcastMessage(msg: Message, exceptUser?: User): void {
