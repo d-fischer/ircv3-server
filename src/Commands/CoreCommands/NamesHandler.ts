@@ -11,10 +11,10 @@ export class NamesHandler extends CommandHandler<MessageTypes.Commands.Names> {
 	handleCommand(cmd: MessageTypes.Commands.Names, user: User, server: Server): void {
 		user.ifRegistered(() => {
 			// RFC allows to only process the first channel
-			const [channelName] = cmd.params.channel.split(',');
+			const channelNames = cmd.params.channel?.split(',');
 
-			if (channelName) {
-				const channel = server.getChannelByName(channelName);
+			if (channelNames?.length) {
+				const channel = server.getChannelByName(channelNames[0]);
 
 				if (channel) {
 					channel.sendNames(user);
@@ -24,7 +24,7 @@ export class NamesHandler extends CommandHandler<MessageTypes.Commands.Names> {
 				// TODO global user list? it doesn't seem to be widely implemented
 			}
 			user.sendNumericReply(MessageTypes.Numerics.Reply366EndOfNames, {
-				channel: channelName || '*',
+				channel: channelNames?.[0] ?? '*',
 				suffix: 'End of /NAMES list'
 			});
 		});

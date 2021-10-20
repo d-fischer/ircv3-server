@@ -3,6 +3,7 @@ import { InviteModule } from './Modules/CoreModules/Invite';
 import { ListModule } from './Modules/CoreModules/List';
 import { NoExternalMessagesModule } from './Modules/CoreModules/NoExternalMessages';
 import { TopicLockModule } from './Modules/CoreModules/TopicLock';
+import { UserHostModule } from './Modules/CoreModules/UserHost';
 import { Server } from './Server';
 
 const server = new Server({
@@ -17,6 +18,7 @@ server.loadModule(TopicLockModule);
 server.loadModule(InviteModule);
 
 server.loadModule(ListModule);
+server.loadModule(UserHostModule);
 
 server.listen(6667);
 console.log('Listening on port 6667');

@@ -104,6 +104,10 @@ export class User extends EventEmitter implements ModeHolder {
 		return `+${this._modes.map(mode => mode.mode.letter).join('')}`;
 	}
 
+	get ipAddress(): string {
+		return this._socket.remoteAddress!;
+	}
+
 	ifRegistered(cb: () => void): void {
 		if (this.isRegistered) {
 			cb();
