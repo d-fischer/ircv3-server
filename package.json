@@ -37,7 +37,7 @@
     "@d-fischer/logger": "^0.1.1",
     "@d-fischer/shared-utils": "^3.2.0",
     "@d-fischer/typed-event-emitter": "^3.2.3",
-    "ircv3": "^0.28.1",
+    "ircv3": "^0.29.1",
     "tslib": "^2.3.1"
   },
   "husky": {
