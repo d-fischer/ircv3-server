@@ -31,6 +31,7 @@ import type { ModeHandler, ModeType } from './Modes/ModeHandler';
 import type { Module } from './Modules/Module';
 import { ModuleResult } from './Modules/Module';
 import type { ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
+import type { OperLogin } from './OperLogin';
 import { User } from './User';
 
 export interface ServerConfiguration {
@@ -49,6 +50,8 @@ export class Server {
 	private readonly _nickUserMap = new Map<string, User>();
 	private readonly _channels = new Map<string, Channel>();
 	private readonly _commands = new Map<string, CommandHandler>();
+
+	private readonly _operLogins: OperLogin[] = [];
 
 	private readonly _netServer = net.createServer(async socket => await this.initClientConnection(socket));
 	private readonly _startupTime = new Date();
@@ -121,6 +124,14 @@ export class Server {
 		this.addCommand(new NamesHandler());
 		this.addCommand(new TopicHandler());
 		this.addCommand(new ChannelKickHandler());
+	}
+
+	addOperLogin(login: OperLogin): void {
+		this._operLogins.push(login);
+	}
+
+	loginAsOper(userName: string, password: string): OperLogin | null {
+		return this._operLogins.find(l => l.userName === userName && l.password === password) ?? null;
 	}
 
 	get channels(): Map<string, Channel> {

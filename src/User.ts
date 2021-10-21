@@ -68,8 +68,26 @@ export class User extends EventEmitter implements ModeHolder {
 		return result;
 	}
 
-	addMode(mode: ModeHandler): void {
-		this._modes.push({ mode });
+	giveMode(mode: ModeHandler, param?: string): void {
+		const existingMode = this._modes.find(m => m.mode.letter === mode.letter);
+		if (existingMode) {
+			if (param === existingMode.param) {
+				return;
+			}
+			existingMode.param = param;
+		} else {
+			this.addMode(mode, param);
+		}
+		const modes = param === undefined ? `+${mode.letter}` : `+${mode.letter} ${param}`;
+		const msg = this._server.createMessage(MessageTypes.Commands.Mode, {
+			target: this.connectionIdentifier,
+			modes
+		});
+		this.sendMessage(msg);
+	}
+
+	addMode(mode: ModeHandler, param?: string): void {
+		this._modes.push({ mode, param });
 	}
 
 	setNick(newNick: string): NickChangeResult {
