@@ -457,14 +457,12 @@ export class Server {
 		}
 	}
 
-	findMode(letter: string, type: ModeType): ModeHandler | undefined {
-		for (const mode of this._registeredModes) {
-			if (mode.type === type && mode.letter === letter) {
-				return mode;
-			}
-		}
+	findModeByLetter(letter: string, type: ModeType): ModeHandler | undefined {
+		return Array.from(this._registeredModes).find(mode => mode.type === type && mode.letter === letter);
+	}
 
-		return undefined;
+	findModeByName(name: string, type: ModeType): ModeHandler | undefined {
+		return Array.from(this._registeredModes).find(mode => mode.type === type && mode.name === name);
 	}
 
 	loadModule<T extends Module>(moduleClass: new () => T): void {
@@ -488,10 +486,6 @@ export class Server {
 
 	removeMode(mode: ModeHandler): void {
 		this._registeredModes.delete(mode);
-	}
-
-	findModeByLetter(letter: string, type: ModeType): ModeHandler | undefined {
-		return Array.from(this._registeredModes).find(mode => mode.type === type && mode.letter === letter);
 	}
 
 	addCommand(command: CommandHandler): boolean {

@@ -69,7 +69,7 @@ export class User extends EventEmitter implements ModeHolder {
 	}
 
 	giveMode(mode: ModeHandler, param?: string): void {
-		const existingMode = this._modes.find(m => m.mode.letter === mode.letter);
+		const existingMode = this._modes.find(m => m.mode.name === mode.name);
 		if (existingMode) {
 			if (param === existingMode.param) {
 				return;
@@ -160,8 +160,8 @@ export class User extends EventEmitter implements ModeHolder {
 		return this._socket.remoteAddress!;
 	}
 
-	hasMode(letter: string): boolean {
-		return this._modes.some(m => m.mode.letter === letter);
+	hasMode(name: string): boolean {
+		return this._modes.some(m => m.mode.name === name);
 	}
 
 	ifRegistered(cb: () => void): void {
@@ -178,7 +178,7 @@ export class User extends EventEmitter implements ModeHolder {
 		const resultingModes = this._modes.slice();
 		const filteredChanges: SingleMode[] = [];
 		for (const mode of changes) {
-			const modeDescriptor = this._server.findMode(mode.letter, 'user')!;
+			const modeDescriptor = this._server.findModeByLetter(mode.letter, 'user')!;
 			const adding = mode.action === 'add';
 			if (!modeDescriptor.canSetOn(this, this, this._server, adding, mode.param)) {
 				// the mode itself should handle the individual error here

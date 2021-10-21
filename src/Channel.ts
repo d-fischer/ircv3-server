@@ -75,7 +75,7 @@ export class Channel implements ModeHolder {
 		const resultingAccess = new Map<User, string>(this._userAccess);
 		const filteredChanges: SingleMode[] = [];
 		for (const mode of changes) {
-			const modeDescriptor = this._server.findMode(mode.letter, 'channel')!;
+			const modeDescriptor = this._server.findModeByLetter(mode.letter, 'channel')!;
 			const adding = mode.action === 'add';
 			const isPrefix = this._server.supportedChannelModes.prefix.includes(mode.letter);
 			if (isPrefix) {
@@ -247,7 +247,7 @@ export class Channel implements ModeHolder {
 		// TODO only set allPrefixes to true if indicated by the user
 		const prefixedNicks = this._userAccess.has(user)
 			? this.getPrefixedNicks(true)
-			: this.getPrefixedNicks(true, u => !u.hasMode('i'));
+			: this.getPrefixedNicks(true, u => !u.hasMode('invisible'));
 		user.sendNumericReply(MessageTypes.Numerics.Reply353NamesReply, {
 			channelType: '=',
 			channel: this.name,
