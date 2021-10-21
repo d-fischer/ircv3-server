@@ -32,12 +32,16 @@ import type { Module } from './Modules/Module';
 import { ModuleResult } from './Modules/Module';
 import type { ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
 import type { OperLogin } from './OperLogin';
+import { assertNever } from './Toolkit/TypeTools';
 import { User } from './User';
+
+export type CaseMapping = 'ascii' | 'rfc1459' | 'rfc1459-strict';
 
 export interface ServerConfiguration {
 	serverAddress: string;
 	serverName?: string;
 	version?: string;
+	caseMapping?: CaseMapping;
 }
 
 export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
@@ -46,6 +50,11 @@ export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
 }
 
 export class Server {
+	private readonly _serverAddress: string;
+	private readonly _serverName: string;
+	private readonly _version: string;
+	private readonly _caseMapping: CaseMapping;
+
 	private readonly _users: User[] = [];
 	private readonly _nickUserMap = new Map<string, User>();
 	private readonly _channels = new Map<string, Channel>();
@@ -105,13 +114,11 @@ export class Server {
 
 	private readonly _registeredModes = new Set<ModeHandler>();
 
-	constructor(private readonly _config: ServerConfiguration) {
-		if (!_config.serverName) {
-			_config.serverName = _config.serverAddress;
-		}
-		if (!_config.version) {
-			_config.version = 'node-ircv3-server-0.0.1';
-		}
+	constructor(config: ServerConfiguration) {
+		this._serverAddress = config.serverAddress;
+		this._serverName = config.serverName ?? config.serverAddress;
+		this._version = config.version ?? 'node-ircv3-server-0.0.1';
+		this._caseMapping = config.caseMapping ?? 'ascii';
 
 		this.addCommand(new UserRegistrationHandler());
 		this.addCommand(new NickChangeHandler());
@@ -177,12 +184,12 @@ export class Server {
 	}
 
 	get serverAddress(): string {
-		return this._config.serverAddress;
+		return this._serverAddress;
 	}
 
 	get serverPrefix(): MessagePrefix {
 		return {
-			nick: this._config.serverAddress
+			nick: this._serverAddress
 		};
 	}
 
@@ -234,20 +241,20 @@ export class Server {
 			}
 		});
 		user.onRegister(() => {
-			this._nickUserMap.set(Server._caseFoldString(user.nick!), user);
+			this._nickUserMap.set(this._caseFoldString(user.nick!), user);
 			user.sendNumericReply(MessageTypes.Numerics.Reply001Welcome, {
 				welcomeText: 'the server welcomes you!'
 			});
 			user.sendNumericReply(MessageTypes.Numerics.Reply002YourHost, {
-				yourHost: `Your host is ${this._config.serverAddress}, running version ${this._config.version!}`
+				yourHost: `Your host is ${this._serverAddress}, running version ${this._version}`
 			});
 			user.sendNumericReply(MessageTypes.Numerics.Reply003Created, {
 				createdText: `This server was created ${this._startupTime.toISOString()}`
 			});
 			const channelModes = this.supportedChannelModes;
 			user.sendNumericReply(MessageTypes.Numerics.Reply004ServerInfo, {
-				serverName: this._config.serverAddress,
-				version: this._config.version,
+				serverName: this._serverAddress,
+				version: this._version,
 				userModes: this.supportedUserModes,
 				channelModes: Object.values(channelModes).join('').split('').sort().join('')
 			});
@@ -257,8 +264,7 @@ export class Server {
 				.join('')}`;
 			const chanModesString = `${channelModes.list},${channelModes.alwaysWithParam},${channelModes.paramWhenSet},${channelModes.noParam}`;
 			user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
-				supports: `CHANTYPES=# NETWORK=${this._config
-					.serverName!} CHANMODES=${chanModesString} PREFIX=${prefixString}`,
+				supports: `CHANTYPES=# NETWORK=${this._serverName} CHANMODES=${chanModesString} PREFIX=${prefixString} CASEMAPPING=${this._caseMapping}`,
 				suffix: 'are supported by this server'
 			});
 			if (user.modesAsString) {
@@ -269,12 +275,12 @@ export class Server {
 			this.sendMotd(user);
 		});
 		user.onNickChange(oldNick => {
-			const newNickCaseFolded = Server._caseFoldString(user.nick!);
+			const newNickCaseFolded = this._caseFoldString(user.nick!);
 			if (!oldNick) {
 				this._nickUserMap.set(newNickCaseFolded, user);
 				return;
 			}
-			const oldNickCaseFolded = Server._caseFoldString(oldNick);
+			const oldNickCaseFolded = this._caseFoldString(oldNick);
 			if (newNickCaseFolded !== oldNickCaseFolded) {
 				this._nickUserMap.delete(oldNickCaseFolded);
 				this._nickUserMap.set(newNickCaseFolded, user);
@@ -293,7 +299,7 @@ export class Server {
 	joinChannel(user: User, channel: string | Channel): void {
 		let isFirst = false;
 		if (typeof channel === 'string') {
-			const foldedName = Server._caseFoldString(channel);
+			const foldedName = this._caseFoldString(channel);
 			let channelObject = this._channels.get(foldedName);
 			if (!channelObject) {
 				isFirst = true;
@@ -306,7 +312,7 @@ export class Server {
 		const res = this.callHook('channelJoin', channel, user);
 		if (res === ModuleResult.DENY) {
 			if (isFirst) {
-				this._channels.delete(Server._caseFoldString(channel.name));
+				this._channels.delete(this._caseFoldString(channel.name));
 			}
 			return;
 		}
@@ -366,22 +372,21 @@ export class Server {
 	}
 
 	nickExists(nick: string): boolean {
-		return this._nickUserMap.has(Server._caseFoldString(nick));
+		return this._nickUserMap.has(this._caseFoldString(nick));
 	}
 
 	nickChangeAllowed(oldNick: string | undefined, newNick: string): boolean {
 		return (
-			(oldNick && Server._caseFoldString(oldNick) === Server._caseFoldString(newNick)) ||
-			!this.nickExists(newNick)
+			(oldNick && this._caseFoldString(oldNick) === this._caseFoldString(newNick)) || !this.nickExists(newNick)
 		);
 	}
 
 	getUserByNick(nick: string): User | undefined {
-		return this._nickUserMap.get(Server._caseFoldString(nick));
+		return this._nickUserMap.get(this._caseFoldString(nick));
 	}
 
 	getChannelByName(name: string): Channel | undefined {
-		return this._channels.get(Server._caseFoldString(name));
+		return this._channels.get(this._caseFoldString(name));
 	}
 
 	destroyConnection(user: User): void {
@@ -399,7 +404,7 @@ export class Server {
 				this.unlinkUserFromChannel(user, channel);
 			}
 			if (user.nick) {
-				this._nickUserMap.delete(Server._caseFoldString(user.nick));
+				this._nickUserMap.delete(this._caseFoldString(user.nick));
 			}
 		}
 		const index = this._users.findIndex(u => u === user);
@@ -430,7 +435,7 @@ export class Server {
 			this.unlinkUserFromChannel(user, channel);
 		}
 
-		this._channels.delete(Server._caseFoldString(channel.name));
+		this._channels.delete(this._caseFoldString(channel.name));
 	}
 
 	createMessage<T extends Message>(
@@ -518,7 +523,26 @@ export class Server {
 		return result;
 	}
 
-	private static _caseFoldString(str: string) {
-		return str.toLowerCase();
+	private _caseFoldString(str: string) {
+		switch (this._caseMapping) {
+			case 'ascii': {
+				return str.replace(/[A-Z]/g, l => l.toLowerCase());
+			}
+			case 'rfc1459':
+			case 'rfc1459-strict': {
+				const specialReplacements: Record<string, string | undefined> = {
+					'[': '{',
+					']': '}',
+					'\\': '|'
+				};
+				if (this._caseMapping === 'rfc1459-strict') {
+					specialReplacements['~'] = '^';
+				}
+				return str.replace(/[A-Z[\]\\~]/g, l => specialReplacements[l] ?? l.toLowerCase());
+			}
+			default: {
+				return assertNever(this._caseMapping);
+			}
+		}
 	}
 }
