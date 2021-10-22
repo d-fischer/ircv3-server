@@ -42,6 +42,9 @@ export interface ServerConfiguration {
 	serverName?: string;
 	version?: string;
 	caseMapping?: CaseMapping;
+	channelLimit?: number;
+	channelLength?: number;
+	nickLength?: number;
 }
 
 export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
@@ -54,6 +57,9 @@ export class Server {
 	private readonly _serverName: string;
 	private readonly _version: string;
 	private readonly _caseMapping: CaseMapping;
+	private readonly _channelLimit: number;
+	private readonly _channelLength: number;
+	private readonly _nickLength: number;
 
 	private readonly _users: User[] = [];
 	private readonly _nickUserMap = new Map<string, User>();
@@ -119,6 +125,9 @@ export class Server {
 		this._serverName = config.serverName ?? config.serverAddress;
 		this._version = config.version ?? 'node-ircv3-server-0.0.1';
 		this._caseMapping = config.caseMapping ?? 'ascii';
+		this._channelLimit = config.channelLimit ?? 50;
+		this._channelLength = config.channelLength ?? 32;
+		this._nickLength = config.nickLength ?? 31;
 
 		this.addCommand(new UserRegistrationHandler());
 		this.addCommand(new NickChangeHandler());
@@ -165,6 +174,10 @@ export class Server {
 			.map(mode => mode.letter)
 			.sort()
 			.join('');
+	}
+
+	get nickLength(): number {
+		return this._nickLength;
 	}
 
 	getPrefixDefinitionByModeChar(char: string): InternalAccessLevelDefinition | null {
@@ -264,7 +277,7 @@ export class Server {
 				.join('')}`;
 			const chanModesString = `${channelModes.list},${channelModes.alwaysWithParam},${channelModes.paramWhenSet},${channelModes.noParam}`;
 			user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
-				supports: `CHANTYPES=# NETWORK=${this._serverName} CHANMODES=${chanModesString} PREFIX=${prefixString} CASEMAPPING=${this._caseMapping}`,
+				supports: `CHANTYPES=# CHANLIMIT=#:${this._channelLimit} CHANNELLEN=${this._channelLength} NICKLEN=${this._nickLength} NETWORK=${this._serverName} CHANMODES=${chanModesString} PREFIX=${prefixString} CASEMAPPING=${this._caseMapping}`,
 				suffix: 'are supported by this server'
 			});
 			if (user.modesAsString) {
@@ -297,6 +310,21 @@ export class Server {
 	}
 
 	joinChannel(user: User, channel: string | Channel): void {
+		const channelName = typeof channel === 'string' ? channel : channel.name;
+		if (user.channels.size >= this._channelLimit) {
+			user.sendNumericReply(MessageTypes.Numerics.Error405TooManyChannels, {
+				channel: channelName,
+				suffix: 'You have joined too many channels'
+			});
+			return;
+		}
+		if (channelName.length > this._channelLength) {
+			user.sendNumericReply(MessageTypes.Numerics.Error479BadChanName, {
+				channel: channelName,
+				suffix: 'Illegal channel name'
+			});
+			return;
+		}
 		let isFirst = false;
 		if (typeof channel === 'string') {
 			const foldedName = this._caseFoldString(channel);
@@ -376,9 +404,10 @@ export class Server {
 	}
 
 	nickChangeAllowed(oldNick: string | undefined, newNick: string): boolean {
-		return (
-			(oldNick && this._caseFoldString(oldNick) === this._caseFoldString(newNick)) || !this.nickExists(newNick)
-		);
+		if (oldNick && this._caseFoldString(oldNick) === this._caseFoldString(newNick)) {
+			return true;
+		}
+		return !this.nickExists(newNick);
 	}
 
 	getUserByNick(nick: string): User | undefined {

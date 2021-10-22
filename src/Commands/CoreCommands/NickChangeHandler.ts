@@ -17,7 +17,7 @@ export class NickChangeHandler extends CommandHandler<MessageTypes.Commands.Nick
 		}
 		const oldPrefix = user.isRegistered ? user.prefix : { nick: '*' };
 		const result = user.setNick(newNick);
-		switch (result) {
+		switch (result.result) {
 			case 'invalid': {
 				user.sendNumericReply(MessageTypes.Numerics.Error432ErroneusNickname, {
 					nick: newNick,
@@ -37,7 +37,7 @@ export class NickChangeHandler extends CommandHandler<MessageTypes.Commands.Nick
 					const msg = server.createMessage(
 						MessageTypes.Commands.NickChange,
 						{
-							nick: newNick
+							nick: result.newNick
 						},
 						oldPrefix
 					);

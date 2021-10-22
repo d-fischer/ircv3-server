@@ -9,7 +9,20 @@ import type { ModeHolder } from './Modes/ModeHolder';
 import type { Server } from './Server';
 import type { ModeState } from './Toolkit/ModeTools';
 
-type NickChangeResult = 'ok' | 'invalid' | 'inUse';
+interface NickChangeInvalidResult {
+	result: 'invalid';
+}
+
+interface NickChangeInUseResult {
+	result: 'inUse';
+}
+
+interface NickChangeOkResult {
+	result: 'ok';
+	newNick: string;
+}
+
+type NickChangeResult = NickChangeInvalidResult | NickChangeInUseResult | NickChangeOkResult;
 
 export class User extends EventEmitter implements ModeHolder {
 	private _nick?: string;
@@ -92,17 +105,21 @@ export class User extends EventEmitter implements ModeHolder {
 
 	setNick(newNick: string): NickChangeResult {
 		if (!this._server.nickChangeAllowed(this._nick, newNick)) {
-			return 'inUse';
+			return { result: 'inUse' };
 		}
 		// if nick contains an invalid char or only numbers, it fails
 		if (/[^a-zA-Z0-9[\]{}|\\^_-]/.test(newNick) || !/[^0-9]/.test(newNick)) {
-			return 'invalid';
+			return { result: 'invalid' };
 		}
+		const oldNick = this._nick;
+		newNick = newNick.slice(0, this._server.nickLength);
 		this._nick = newNick;
-		if (!this._registered) {
+		if (this._registered) {
+			this.emit(this.onNickChange, oldNick);
+		} else {
 			this._checkNewRegistration();
 		}
-		return 'ok';
+		return { result: 'ok', newNick };
 	}
 
 	setUserRegistration(user: string, realName: string): void {
