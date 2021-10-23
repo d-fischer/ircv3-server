@@ -10,6 +10,7 @@ export interface ModuleHookTypes {
 	channelCreate: (channel: Channel, user: User) => ModuleResult;
 	preTopicChange: (channel: Channel, user: User, topic: string) => ModuleResult;
 	channelMessage: (channel: Channel, user: User, message: string) => ModuleResult;
+	channelNotice: (channel: Channel, user: User, message: string) => ModuleResult;
 	channelJoin: (channel: Channel, user: User) => ModuleResult;
 	modeChange: (target: ModeHolder, user: User, changes: SingleMode[]) => ModuleResult;
 }

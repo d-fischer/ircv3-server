@@ -23,6 +23,7 @@ import { ClientQuitHandler } from './Commands/CoreCommands/ClientQuitHandler';
 import { ModeCommandHandler } from './Commands/CoreCommands/ModeCommandHandler';
 import { NamesHandler } from './Commands/CoreCommands/NamesHandler';
 import { NickChangeHandler } from './Commands/CoreCommands/NickChangeHandler';
+import { NoticeHandler } from './Commands/CoreCommands/Notice';
 import { PingHandler } from './Commands/CoreCommands/PingHandler';
 import { PrivmsgHandler } from './Commands/CoreCommands/PrivmsgHandler';
 import { TopicHandler } from './Commands/CoreCommands/TopicHandler';
@@ -82,6 +83,7 @@ export class Server {
 				'userDestroy',
 				'preTopicChange',
 				'channelMessage',
+				'channelNotice',
 				'modeChange',
 				'channelCreate',
 				'channelJoin'
@@ -140,6 +142,7 @@ export class Server {
 		this.addCommand(new ClientQuitHandler());
 		this.addCommand(new PingHandler());
 		this.addCommand(new PrivmsgHandler());
+		this.addCommand(new NoticeHandler());
 		this.addCommand(new ModeCommandHandler());
 		this.addCommand(new ChannelJoinHandler());
 		this.addCommand(new ChannelPartHandler());
