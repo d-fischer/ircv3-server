@@ -3,6 +3,7 @@ import { InviteModule } from './Modules/CoreModules/Invite';
 import { ListModule } from './Modules/CoreModules/List';
 import { NoExternalMessagesModule } from './Modules/CoreModules/NoExternalMessages';
 import { OperModule } from './Modules/CoreModules/Oper';
+import { TimeModule } from './Modules/CoreModules/Time';
 import { TopicLockModule } from './Modules/CoreModules/TopicLock';
 import { UserHostModule } from './Modules/CoreModules/UserHost';
 import { Server } from './Server';
@@ -22,6 +23,8 @@ server.loadModule(ListModule);
 server.loadModule(UserHostModule);
 
 server.loadModule(OperModule);
+
+server.loadModule(TimeModule);
 
 server.addOperLogin({
 	userName: 'testLocal',
