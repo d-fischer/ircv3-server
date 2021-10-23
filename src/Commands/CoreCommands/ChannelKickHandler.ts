@@ -21,10 +21,19 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 			});
 			return;
 		}
+
 		if (!channel.containsUser(user)) {
 			user.sendNumericReply(MessageTypes.Numerics.Error442NotOnChannel, {
 				channel: channel.name,
 				suffix: "You're not on that channel"
+			});
+			return;
+		}
+
+		if (!channel.isUserAtLeast(user, 'halfop')) {
+			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
+				channel: channel.name,
+				suffix: 'You need channel privileges to do this'
 			});
 			return;
 		}
@@ -42,14 +51,6 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 				nick: victim.nick,
 				channel: channel.name,
 				suffix: "They are'nt on that channel"
-			});
-			return;
-		}
-
-		if (!channel.isUserAtLeast(user, 'halfop')) {
-			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
-				channel: channel.name,
-				suffix: 'You need channel privileges to do this'
 			});
 			return;
 		}

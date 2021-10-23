@@ -32,6 +32,14 @@ export class InviteCommandHandler extends CommandHandler<MessageTypes.Commands.C
 			return;
 		}
 
+		if (channel.hasModeSet(this._inviteOnlyMode) && !channel.isUserAtLeast(user, 'halfop')) {
+			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
+				channel: channel.name,
+				suffix: 'You need channel privileges to do this'
+			});
+			return;
+		}
+
 		const target = server.getUserByNick(targetNick);
 		if (!target) {
 			user.sendNumericReply(MessageTypes.Numerics.Error401NoSuchNick, {
@@ -45,14 +53,6 @@ export class InviteCommandHandler extends CommandHandler<MessageTypes.Commands.C
 				nick: target.nick,
 				channel: channel.name,
 				suffix: 'is already on channel'
-			});
-			return;
-		}
-
-		if (channel.hasModeSet(this._inviteOnlyMode) && !channel.isUserAtLeast(user, 'halfop')) {
-			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
-				channel: channel.name,
-				suffix: 'You need channel privileges to do this'
 			});
 			return;
 		}
