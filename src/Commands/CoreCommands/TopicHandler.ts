@@ -20,7 +20,7 @@ export class TopicHandler extends CommandHandler<MessageTypes.Commands.Topic> {
 					if (newTopic) {
 						const result = server.callHook('preTopicChange', channel, user, newTopic);
 						if (result !== ModuleResult.DENY) {
-							channel.changeTopic(newTopic, user);
+							channel.changeTopic(newTopic.slice(0, server.topicLength), user);
 						}
 					} else {
 						channel.sendTopic(user);

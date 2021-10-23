@@ -45,6 +45,8 @@ export interface ServerConfiguration {
 	channelLimit?: number;
 	channelLength?: number;
 	nickLength?: number;
+	topicLength?: number;
+	userLength?: number;
 }
 
 export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
@@ -60,6 +62,8 @@ export class Server {
 	private readonly _channelLimit: number;
 	private readonly _channelLength: number;
 	private readonly _nickLength: number;
+	private readonly _topicLength: number;
+	private readonly _userLength: number;
 
 	private readonly _users: User[] = [];
 	private readonly _nickUserMap = new Map<string, User>();
@@ -128,6 +132,8 @@ export class Server {
 		this._channelLimit = config.channelLimit ?? 50;
 		this._channelLength = config.channelLength ?? 32;
 		this._nickLength = config.nickLength ?? 31;
+		this._topicLength = config.topicLength ?? 390;
+		this._userLength = config.userLength ?? 12;
 
 		this.addCommand(new UserRegistrationHandler());
 		this.addCommand(new NickChangeHandler());
@@ -178,6 +184,14 @@ export class Server {
 
 	get nickLength(): number {
 		return this._nickLength;
+	}
+
+	get topicLength(): number {
+		return this._topicLength;
+	}
+
+	get userLength(): number {
+		return this._userLength;
 	}
 
 	getPrefixDefinitionByModeChar(char: string): InternalAccessLevelDefinition | null {
@@ -284,7 +298,9 @@ export class Server {
 				['NETWORK', this._serverName],
 				['CHANMODES', chanModesString],
 				['PREFIX', prefixString],
-				['CASEMAPPING', this._caseMapping]
+				['CASEMAPPING', this._caseMapping],
+				['USERLEN', this._userLength.toString()],
+				['TOPICLEN', this._topicLength.toString()]
 			]);
 			if (user.modesAsString) {
 				user.sendNumericReply(MessageTypes.Numerics.Reply221UmodeIs, {
@@ -317,11 +333,12 @@ export class Server {
 
 	sendSupportTokens(user: User, tokens: Array<[string, string]>): void {
 		// An IRC line can have 510 characters, excluding the trailing CRLF.
-		// From that we subtract the following characters:
+		// From that we subtract the following fixed characters:
 		// :<serveraddr> 005 <username> <tokens> :are supported by this server
 		// ^            ^   ^          ^        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		// to get 510 - 34 = 476 available characters.
-		// We also have to subtract the length of the numeric and the <serveraddr> and <username> placeholders.
+		// The things that are still missing are the length of the numeric and the <serveraddr> and <username> placeholders.
+		// After subtracting these, we have the maximum length the tokens can have.
 		const limit =
 			476 -
 			this._serverAddress.length -
