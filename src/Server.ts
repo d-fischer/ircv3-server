@@ -276,10 +276,16 @@ export class Server {
 				.map(pref => pref.prefix)
 				.join('')}`;
 			const chanModesString = `${channelModes.list},${channelModes.alwaysWithParam},${channelModes.paramWhenSet},${channelModes.noParam}`;
-			user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
-				supports: `CHANTYPES=# CHANLIMIT=#:${this._channelLimit} CHANNELLEN=${this._channelLength} NICKLEN=${this._nickLength} NETWORK=${this._serverName} CHANMODES=${chanModesString} PREFIX=${prefixString} CASEMAPPING=${this._caseMapping}`,
-				suffix: 'are supported by this server'
-			});
+			this.sendSupportTokens(user, [
+				['CHANTYPES', '#'],
+				['CHANLIMIT', `#:${this._channelLimit}`],
+				['CHANNELLEN', this._channelLength.toString()],
+				['NICKLEN', this._nickLength.toString()],
+				['NETWORK', this._serverName],
+				['CHANMODES', chanModesString],
+				['PREFIX', prefixString],
+				['CASEMAPPING', this._caseMapping]
+			]);
 			if (user.modesAsString) {
 				user.sendNumericReply(MessageTypes.Numerics.Reply221UmodeIs, {
 					modes: user.modesAsString
@@ -307,6 +313,47 @@ export class Server {
 		user.sendNumericReply(MessageTypes.Numerics.Error422NoMotd, {
 			suffix: 'MOTD File is missing'
 		});
+	}
+
+	sendSupportTokens(user: User, tokens: Array<[string, string]>): void {
+		// An IRC line can have 510 characters, excluding the trailing CRLF.
+		// From that we subtract the following characters:
+		// :<serveraddr> 005 <username> <tokens> :are supported by this server
+		// ^            ^   ^          ^        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		// to get 510 - 34 = 476 available characters.
+		// We also have to subtract the length of the numeric and the <serveraddr> and <username> placeholders.
+		const limit =
+			476 -
+			this._serverAddress.length -
+			MessageTypes.Numerics.Reply005Isupport.COMMAND.length -
+			user.connectionIdentifier.length;
+
+		let currentLine = '';
+		for (const [tokenName, tokenValue] of tokens) {
+			const tokenSize = tokenName.length + tokenValue.length + 1;
+			if (tokenSize > limit) {
+				console.warn(
+					`ISUPPORT token too long: ${tokenName}=${tokenValue} (max length ${limit}, actual ${tokenSize})`
+				);
+			} else if (currentLine.length + tokenSize + 1 > limit) {
+				user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
+					supports: currentLine,
+					suffix: 'are supported by this server'
+				});
+				currentLine = `${tokenName}=${tokenValue}`;
+			} else {
+				if (currentLine.length) {
+					currentLine += ' ';
+				}
+				currentLine += `${tokenName}=${tokenValue}`;
+			}
+		}
+		if (currentLine) {
+			user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
+				supports: currentLine,
+				suffix: 'are supported by this server'
+			});
+		}
 	}
 
 	joinChannel(user: User, channel: string | Channel): void {
