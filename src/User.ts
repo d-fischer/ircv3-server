@@ -52,8 +52,8 @@ export class User extends EventEmitter implements ModeHolder {
 				}
 			}
 		});
-		_socket.on('close', () => this._server.destroyConnection(this));
-		_socket.on('error', () => this._server.destroyConnection(this));
+		_socket.on('close', () => this._server.quitUser(this, 'Connection closed'));
+		_socket.on('error', () => this._server.quitUser(this, 'Connection error occurred'));
 		this._hostName = this._socket.remoteAddress!;
 	}
 

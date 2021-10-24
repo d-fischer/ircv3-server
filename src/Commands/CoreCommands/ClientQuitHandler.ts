@@ -9,6 +9,6 @@ export class ClientQuitHandler extends CommandHandler<MessageTypes.Commands.Clie
 	}
 
 	handleCommand(cmd: MessageTypes.Commands.ClientQuit, user: User, server: Server): void {
-		server.destroyConnection(user);
+		server.quitUser(user, cmd.params.message ? `Quit: ${cmd.params.message}` : 'Client Quit');
 	}
 }

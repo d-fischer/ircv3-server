@@ -18,7 +18,7 @@ export class ChannelPartHandler extends CommandHandler<MessageTypes.Commands.Cha
 				});
 				return;
 			}
-			server.partChannel(user, channelName);
+			server.partChannel(user, channelName, cmd.params.reason);
 		});
 	}
 }

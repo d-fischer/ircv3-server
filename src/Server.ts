@@ -433,7 +433,7 @@ export class Server {
 		channel.sendNames(user);
 	}
 
-	partChannel(user: User, channel: string | Channel): void {
+	partChannel(user: User, channel: string | Channel, reason?: string): void {
 		if (typeof channel === 'string') {
 			const channelObject = this.getChannelByName(channel);
 			if (!channelObject) {
@@ -457,7 +457,8 @@ export class Server {
 			this.createMessage(
 				MessageTypes.Commands.ChannelPart,
 				{
-					channel: channel.name
+					channel: channel.name,
+					reason
 				},
 				user.prefix
 			)
@@ -485,16 +486,20 @@ export class Server {
 		return this._channels.get(this._caseFoldString(name));
 	}
 
-	destroyConnection(user: User): void {
+	quitUser(user: User, message = 'Quit'): void {
 		if (!user.destroy()) {
 			return;
 		}
 		if (user.isRegistered) {
 			this.broadcastToCommonChannelUsers(
 				user,
-				this.createMessage(MessageTypes.Commands.ClientQuit, {
-					message: 'Bye bye!'
-				})
+				this.createMessage(
+					MessageTypes.Commands.ClientQuit,
+					{
+						message
+					},
+					user.prefix
+				)
 			);
 			for (const channel of user.channels) {
 				this.unlinkUserFromChannel(user, channel);
