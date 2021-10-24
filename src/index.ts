@@ -1,5 +1,6 @@
 import { InvisibleModule } from './Modules/CoreModules/Invisible';
 import { InviteModule } from './Modules/CoreModules/Invite';
+import { KillModule } from './Modules/CoreModules/Kill';
 import { ListModule } from './Modules/CoreModules/List';
 import { NoExternalMessagesModule } from './Modules/CoreModules/NoExternalMessages';
 import { OperModule } from './Modules/CoreModules/Oper';
@@ -23,6 +24,7 @@ server.loadModule(ListModule);
 server.loadModule(UserHostModule);
 
 server.loadModule(OperModule);
+server.loadModule(KillModule);
 
 server.loadModule(TimeModule);
 

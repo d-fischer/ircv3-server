@@ -486,6 +486,15 @@ export class Server {
 		return this._channels.get(this._caseFoldString(name));
 	}
 
+	killUser(user: User, reason?: string, sender?: string): void {
+		const quitMessage = `Killed (${sender ?? this._serverAddress} (${reason ?? 'no reason'}))`;
+		const msg = createMessage(MessageTypes.Commands.ErrorMessage, {
+			content: `Closing Link: ${this._serverAddress} (${quitMessage})`
+		});
+		user.sendMessage(msg);
+		this.quitUser(user, quitMessage);
+	}
+
 	quitUser(user: User, message = 'Quit'): void {
 		if (!user.destroy()) {
 			return;
