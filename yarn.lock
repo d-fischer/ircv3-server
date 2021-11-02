@@ -1147,10 +1147,10 @@ internal-slot@^1.0.3:
     has "^1.0.3"
     side-channel "^1.0.4"
 
-ircv3@^0.29.1:
-  version "0.29.1"
-  resolved "https://registry.yarnpkg.com/ircv3/-/ircv3-0.29.1.tgz#2599c27bb68dbf2fe97e1b00a404064346ca4ad9"
-  integrity sha512-gZ4th+4Xq/b/XJjqCPXN5yO32kwys+DVjUqyjqDSd+IdBfZA/KroWPW4k5krJSJyuGJXmKZcw0rhvcwEqdtGVw==
+ircv3@^0.29.2:
+  version "0.29.2"
+  resolved "https://registry.yarnpkg.com/ircv3/-/ircv3-0.29.2.tgz#42652aa3fbfcaf40ed1e4e304b02a63649441501"
+  integrity sha512-c08PA9UedWFoMugUml9CZ2eUq+4jT8MRot1lGK5ZAayU4ikdaZn0XnPNO15ROZMbyrF1qo+JT/OueftUJj6qsg==
   dependencies:
     "@d-fischer/connection" "^6.6.0"
     "@d-fischer/escape-string-regexp" "^5.0.0"
