@@ -1,4 +1,5 @@
 import { MessageTypes } from 'ircv3';
+import type { SendResponseCallback } from '../../../SendResponseCallback';
 import { Module, ModuleResult } from '../../Module';
 import { InviteOnlyModeHandler } from './InviteOnlyModeHandler';
 import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
@@ -8,7 +9,6 @@ import type { User } from '../../../User';
 import type { Channel } from '../../../Channel';
 
 export class InviteModule extends Module {
-	private readonly _invites = new Set<Invite>();
 	private readonly _invitesByUser = new Map<User, Set<Invite>>();
 	private readonly _inviteOnlyMode = new InviteOnlyModeHandler();
 	private readonly _inviteCommand = new InviteCommandHandler(this._inviteOnlyMode, this);
@@ -21,8 +21,6 @@ export class InviteModule extends Module {
 	}
 
 	_addInvite(invite: Invite): void {
-		this._invites.add(invite);
-
 		let invitesForThisUser = this._invitesByUser.get(invite.user);
 
 		if (!invitesForThisUser) {
@@ -33,21 +31,20 @@ export class InviteModule extends Module {
 		invitesForThisUser.add(invite);
 	}
 
-	onChannelJoin = (channel: Channel, user: User): ModuleResult => {
+	onChannelJoin = (channel: Channel, user: User, respond: SendResponseCallback): ModuleResult => {
 		if (channel.hasModeSet(this._inviteOnlyMode)) {
 			const invitesForUser = this._invitesByUser.get(user);
 
 			if (invitesForUser) {
 				for (const invite of invitesForUser) {
 					if (invite.channel === channel) {
-						this._invites.delete(invite);
 						invitesForUser.delete(invite);
 						return ModuleResult.NEXT;
 					}
 				}
 			}
 
-			user.sendNumericReply(MessageTypes.Numerics.Error473InviteOnlyChan, {
+			respond(MessageTypes.Numerics.Error473InviteOnlyChan, {
 				channel: channel.name,
 				suffix: 'Cannot join channel (+i)'
 			});
@@ -59,10 +56,6 @@ export class InviteModule extends Module {
 
 	onUserDestroy = (user: User): ModuleResult => {
 		if (this._invitesByUser.has(user)) {
-			for (const invite of this._invitesByUser.get(user)!) {
-				this._invites.delete(invite);
-			}
-
 			this._invitesByUser.delete(user);
 		}
 

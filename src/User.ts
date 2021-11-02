@@ -1,11 +1,13 @@
 import { EventEmitter } from '@d-fischer/typed-event-emitter';
-import { promises as dns, NODATA, NOTFOUND } from 'dns';
-import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
-import { createMessage, MessageTypes } from 'ircv3';
+import { NODATA, NOTFOUND, promises as dns } from 'dns';
+import type { Capability, Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
+import { Acknowledgement, Batch, CoreCapabilities, createMessage, MessageTypes } from 'ircv3';
 import type * as net from 'net';
 import { Channel } from './Channel';
 import type { ModeHandler } from './Modes/ModeHandler';
 import type { ModeHolder } from './Modes/ModeHolder';
+import type { SendableMessageProperties } from './SendableMessageProperties';
+import type { SendResponseCallback, SendResponseIntermediateObject } from './SendResponseCallback';
 import type { Server } from './Server';
 import type { ModeState } from './Toolkit/ModeTools';
 
@@ -31,11 +33,17 @@ export class User extends EventEmitter implements ModeHolder {
 	private _realName?: string;
 
 	private _hostIpResolved: boolean | null = null;
+	private _capabilitiesNegotiating = false;
 	private _registered = false;
 	private _destroying = false;
 
 	private _modes: ModeState[] = [];
 	private readonly _channels = new Set<Channel>();
+
+	private _capabilityNegotiationVersion: number | null = null;
+	private readonly _negotiatedCapabilities = new Map<string, Capability>();
+	private _supportsTags = false;
+	private _currentBatchReference = 0;
 
 	onLine = this.registerEvent<[line: string]>();
 	onRegister = this.registerEvent<[]>();
@@ -81,7 +89,50 @@ export class User extends EventEmitter implements ModeHolder {
 		return result;
 	}
 
-	giveMode(mode: ModeHandler, param?: string): void {
+	get capabilityNegotiationVersion(): number | null {
+		return this._capabilityNegotiationVersion;
+	}
+
+	get capabilityNames(): string[] {
+		return Array.from(this._negotiatedCapabilities.keys());
+	}
+
+	set capabilitiesNegotiating(value: boolean) {
+		this._capabilitiesNegotiating = value;
+		if (!value && !this._registered) {
+			this._checkNewRegistration();
+		}
+	}
+
+	hasCapability(cap: Capability): boolean {
+		return this._negotiatedCapabilities.has(cap.name);
+	}
+
+	updateCapVersion(ver: number): void {
+		if (this._capabilityNegotiationVersion == null) {
+			this._capabilityNegotiationVersion = ver;
+		} else {
+			this._capabilityNegotiationVersion = Math.max(this._capabilityNegotiationVersion, ver);
+		}
+	}
+
+	addCapability(cap: Capability): void {
+		this._negotiatedCapabilities.set(cap.name, cap);
+		this._supportsTags ||= cap.usesTags ?? false;
+	}
+
+	removeCapability(cap: Capability): void {
+		this._negotiatedCapabilities.delete(cap.name);
+		this._supportsTags = Array.from(this._negotiatedCapabilities.values()).some(
+			existingCap => existingCap.usesTags
+		);
+	}
+
+	giveMode(mode: ModeHandler, param?: string, respond?: SendResponseCallback): void {
+		const sendMessageToUser =
+			respond ??
+			(<T extends Message<T>>(type: MessageConstructor<T>, params: MessageParamValues<T>) =>
+				this.sendMessage(type, params));
 		const existingMode = this._modes.find(m => m.mode.name === mode.name);
 		if (existingMode) {
 			if (param === existingMode.param) {
@@ -92,11 +143,10 @@ export class User extends EventEmitter implements ModeHolder {
 			this.addMode(mode, param);
 		}
 		const modes = param === undefined ? `+${mode.letter}` : `+${mode.letter} ${param}`;
-		const msg = this._server.createMessage(MessageTypes.Commands.Mode, {
+		sendMessageToUser(MessageTypes.Commands.Mode, {
 			target: this.connectionIdentifier,
 			modes
 		});
-		this.sendMessage(msg);
 	}
 
 	addMode(mode: ModeHandler, param?: string): void {
@@ -181,17 +231,7 @@ export class User extends EventEmitter implements ModeHolder {
 		return this._modes.some(m => m.mode.name === name);
 	}
 
-	ifRegistered(cb: () => void): void {
-		if (this.isRegistered) {
-			cb();
-		} else {
-			this.sendNumericReply(MessageTypes.Numerics.Error451NotRegistered, {
-				suffix: 'You have not registered'
-			});
-		}
-	}
-
-	processModes(changes: SingleMode[]): void {
+	processModes(changes: SingleMode[], source: User, respond: SendResponseCallback): void {
 		const resultingModes = this._modes.slice();
 		const filteredChanges: SingleMode[] = [];
 		for (const mode of changes) {
@@ -242,35 +282,35 @@ export class User extends EventEmitter implements ModeHolder {
 		// normalize (sort) modes
 		this._modes = resultingModes.sort(Channel.stateSorter);
 
-		const msg = this._server.createMessage(
+		const modes = filteredChanges
+			.sort(Channel.actionSorter)
+			.reduce(
+				(result, action) => {
+					let [letters, ...params] = result;
+					if (action.action === 'remove') {
+						if (!letters.includes('-')) {
+							letters += '-';
+						}
+					} else if (letters.length === 0) {
+						letters += '+';
+					}
+
+					letters += action.letter;
+
+					return [letters, ...params];
+				},
+				['']
+			)
+			.join(' ');
+
+		respond(
 			MessageTypes.Commands.Mode,
 			{
 				target: this.connectionIdentifier,
-				modes: filteredChanges
-					.sort(Channel.actionSorter)
-					.reduce(
-						(result, action) => {
-							let [letters, ...params] = result;
-							if (action.action === 'remove') {
-								if (!letters.includes('-')) {
-									letters += '-';
-								}
-							} else if (letters.length === 0) {
-								letters += '+';
-							}
-
-							letters += action.letter;
-
-							return [letters, ...params];
-						},
-						['']
-					)
-					.join(' ')
+				modes: modes
 			},
 			this.prefix
 		);
-
-		this.sendMessage(msg);
 	}
 
 	addChannel(channel: Channel): void {
@@ -298,33 +338,133 @@ export class User extends EventEmitter implements ModeHolder {
 		return false;
 	}
 
-	writeLine(str: string): void {
-		console.log(`${this.connectionIdentifier} < ${str}`);
-		this._socket.write(`${str}\r\n`);
+	sendMessage<T extends Message<T>>(
+		type: MessageConstructor<T>,
+		params: MessageParamValues<T>,
+		prefix: MessagePrefix = this._server.serverPrefix,
+		properties?: SendableMessageProperties
+	): void {
+		let tags: Map<string, string> | undefined = undefined;
+		if (this._supportsTags) {
+			tags =
+				(this._negotiatedCapabilities.has(CoreCapabilities.MessageTags.name) ? properties?.clientTags : null) ??
+				new Map<string, string>();
+
+			if (properties) {
+				if (this.hasCapability(CoreCapabilities.Batch)) {
+					if (properties.partOfBatch) {
+						tags.set('batch', properties.partOfBatch);
+					}
+					if (this.hasCapability(CoreCapabilities.LabeledResponse)) {
+						if (properties.repliesToLabel) {
+							tags.set('label', properties.repliesToLabel);
+						}
+					}
+				}
+			}
+		}
+
+		const msg: Message = createMessage(type, params, prefix, tags, this._server.serverProperties, true);
+		this.sendRawMessage(msg.toString(true));
 	}
 
-	sendMessage(msg: Message): void {
-		this.writeLine(msg.toString(true));
+	sendResponse(toMsg: Message, cb?: (respond: SendResponseCallback) => void): void {
+		const messagesParts: SendResponseIntermediateObject[] = [];
+
+		// allow to not pass a callback to simply send an ACK if applicable
+		if (cb) {
+			const respondFn: SendResponseCallback = (type: MessageConstructor, params, prefix, properties) => {
+				const extendedParams: Record<string, string | undefined> = { ...params };
+				if (type.PARAM_SPEC && Object.prototype.hasOwnProperty.call(type.PARAM_SPEC, 'me')) {
+					extendedParams.me = this.connectionIdentifier;
+				}
+				messagesParts.push({
+					type,
+					params: extendedParams,
+					prefix,
+					properties
+				});
+			};
+
+			cb(respondFn);
+		}
+
+		const labelTag = toMsg.tags.get('label');
+		const supportsLabeledResponse =
+			this.hasCapability(CoreCapabilities.LabeledResponse) && this.hasCapability(CoreCapabilities.Batch);
+		if (!supportsLabeledResponse || !labelTag || messagesParts.length === 1) {
+			for (const { type, params, prefix, properties } of messagesParts) {
+				this.sendMessage(type, params, prefix, {
+					...properties,
+					repliesToLabel: labelTag
+				});
+			}
+			return;
+		}
+
+		if (messagesParts.length === 0) {
+			this.sendMessage(Acknowledgement, {}, undefined, {
+				repliesToLabel: labelTag
+			});
+			return;
+		}
+
+		const reference = this._currentBatchReference.toString().padStart(5, '0');
+		this._currentBatchReference = (this._currentBatchReference + 1) % 1e6;
+
+		this.sendMessage(
+			Batch,
+			{
+				reference: `+${reference}`,
+				type: 'labeled-response',
+				additionalParams: undefined
+			},
+			undefined,
+			{
+				repliesToLabel: labelTag
+			}
+		);
+		for (const { type, params, prefix, properties } of messagesParts) {
+			this.sendMessage(type, params, prefix, {
+				...properties,
+				partOfBatch: reference
+			});
+		}
+		this.sendMessage(Batch, {
+			reference: `-${reference}`
+		});
 	}
 
-	sendNumericReply<T extends Message>(type: MessageConstructor<T>, params: Partial<MessageParamValues<T>>): void {
-		this.writeLine(
-			createMessage(
-				type,
-				{
-					me: this.connectionIdentifier,
-					...params
-				},
-				this._server.serverPrefix,
-				undefined,
-				undefined,
-				true
-			).toString(true)
+	sendRawMessage(msg: string): void {
+		console.log(`${this.connectionIdentifier} < ${msg}`);
+		this._socket.write(`${msg}\r\n`);
+	}
+
+	sendNumeric<T extends Message>(type: MessageConstructor<T>, params: Omit<MessageParamValues<T>, 'me'>): void {
+		this.sendRawMessage(
+			this._server
+				.createMessage(
+					type,
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					{
+						me: this.connectionIdentifier,
+						...params
+					} as MessageParamValues<T>,
+					this._server.serverPrefix
+				)
+				.toString(true)
 		);
 	}
 
 	private _checkNewRegistration() {
-		if (!this._registered && this._nick && this._userName && this._realName && this._hostIpResolved !== null) {
+		if (
+			!this._registered &&
+			this._nick &&
+			this._userName &&
+			this._realName &&
+			this._hostIpResolved !== null &&
+			!this._capabilitiesNegotiating
+		) {
 			this._registered = true;
 			this.emit(this.onRegister);
 		}

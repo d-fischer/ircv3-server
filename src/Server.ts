@@ -1,12 +1,15 @@
 import type {
 	AccessLevelDefinition,
+	Capability,
 	Message,
 	MessageConstructor,
 	MessageParamValues,
 	MessagePrefix,
+	ServerProperties,
 	SupportedModesByType
 } from 'ircv3';
 import {
+	CoreCapabilities,
 	createMessage,
 	MessageTypes,
 	NotEnoughParametersError,
@@ -16,6 +19,7 @@ import {
 import * as net from 'net';
 import { Channel } from './Channel';
 import type { CommandHandler } from './Commands/CommandHandler';
+import { CapabilityNegotiationHandler } from './Commands/CoreCommands/CapabilityNegotiationHandler';
 import { ChannelJoinHandler } from './Commands/CoreCommands/ChannelJoinHandler';
 import { ChannelKickHandler } from './Commands/CoreCommands/ChannelKickHandler';
 import { ChannelPartHandler } from './Commands/CoreCommands/ChannelPartHandler';
@@ -23,9 +27,10 @@ import { ClientQuitHandler } from './Commands/CoreCommands/ClientQuitHandler';
 import { ModeCommandHandler } from './Commands/CoreCommands/ModeCommandHandler';
 import { NamesHandler } from './Commands/CoreCommands/NamesHandler';
 import { NickChangeHandler } from './Commands/CoreCommands/NickChangeHandler';
-import { NoticeHandler } from './Commands/CoreCommands/Notice';
+import { NoticeHandler } from './Commands/CoreCommands/NoticeHandler';
 import { PingHandler } from './Commands/CoreCommands/PingHandler';
 import { PrivmsgHandler } from './Commands/CoreCommands/PrivmsgHandler';
+import { TagMessageHandler } from './Commands/CoreCommands/TagMessageHandler';
 import { TopicHandler } from './Commands/CoreCommands/TopicHandler';
 import { UserRegistrationHandler } from './Commands/CoreCommands/UserRegistrationHandler';
 import type { ModeHandler, ModeType } from './Modes/ModeHandler';
@@ -33,6 +38,8 @@ import type { Module } from './Modules/Module';
 import { ModuleResult } from './Modules/Module';
 import type { ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
 import type { OperLogin } from './OperLogin';
+import type { SendResponseCallback } from './SendResponseCallback';
+import { joinChunks } from './Toolkit/StringTools';
 import { assertNever } from './Toolkit/TypeTools';
 import { User } from './User';
 
@@ -69,7 +76,9 @@ export class Server {
 	private readonly _users: User[] = [];
 	private readonly _nickUserMap = new Map<string, User>();
 	private readonly _channels = new Map<string, Channel>();
-	private readonly _commands = new Map<string, CommandHandler>();
+	private readonly _knownCommands = MessageTypes.all;
+	private readonly _commandHandlers = new Map<string, CommandHandler>();
+	private readonly _capabilities = new Map<string, Capability>();
 
 	private readonly _operLogins: OperLogin[] = [];
 
@@ -79,14 +88,15 @@ export class Server {
 	private readonly _hooksByType = new Map(
 		(
 			[
-				'userCreate',
-				'userDestroy',
-				'preTopicChange',
+				'channelCreate',
+				'channelJoin',
 				'channelMessage',
 				'channelNotice',
+				'channelTagMessage',
 				'modeChange',
-				'channelCreate',
-				'channelJoin'
+				'preTopicChange',
+				'userCreate',
+				'userDestroy'
 			] as Array<keyof ModuleHookTypes>
 		).map((hookName): [keyof ModuleHookTypes, Set<ModuleHook<never>>] => [hookName, new Set<ModuleHook<never>>()])
 	);
@@ -137,6 +147,12 @@ export class Server {
 		this._topicLength = config.topicLength ?? 390;
 		this._userLength = config.userLength ?? 12;
 
+		this.addCapability(CoreCapabilities.MessageTags);
+		this.addCapability(CoreCapabilities.Batch);
+		this.addCapability(CoreCapabilities.LabeledResponse);
+		this.addCapability(CoreCapabilities.CapNotify);
+
+		this.addCommand(new CapabilityNegotiationHandler());
 		this.addCommand(new UserRegistrationHandler());
 		this.addCommand(new NickChangeHandler());
 		this.addCommand(new ClientQuitHandler());
@@ -147,6 +163,7 @@ export class Server {
 		this.addCommand(new ChannelJoinHandler());
 		this.addCommand(new ChannelPartHandler());
 		this.addCommand(new NamesHandler());
+		this.addCommand(new TagMessageHandler());
 		this.addCommand(new TopicHandler());
 		this.addCommand(new ChannelKickHandler());
 	}
@@ -223,66 +240,73 @@ export class Server {
 		};
 	}
 
+	get serverProperties(): ServerProperties {
+		return {
+			supportedUserModes: this.supportedUserModes,
+			supportedChannelModes: this.supportedChannelModes,
+			channelTypes: '#',
+			prefixes: this._prefixes
+		};
+	}
+
 	async initClientConnection(socket: net.Socket): Promise<void> {
 		const user = new User(this, socket);
 		user.onLine(line => {
-			try {
-				const cmd = parseMessage(line, {
-					supportedUserModes: this.supportedUserModes,
-					supportedChannelModes: this.supportedChannelModes,
-					channelTypes: '#',
-					prefixes: this._prefixes
-				});
-				if (this._commands.has(cmd.command)) {
-					const handler = this._commands.get(cmd.command)!;
-					handler.handleCommand(cmd, user, this);
-				} else {
-					user.sendNumericReply(MessageTypes.Numerics.Error421UnknownCommand, {
-						originalCommand: cmd.command,
-						suffix: 'Unknown command'
-					});
-				}
-			} catch (e) {
-				if (e instanceof NotEnoughParametersError) {
-					if (e.command === 'NICK') {
-						user.sendNumericReply(MessageTypes.Numerics.Error431NoNickNameGiven, {
-							suffix: 'No nick name given'
+			const cmd = parseMessage(line, this.serverProperties, this._knownCommands, false, [], false);
+			user.sendResponse(cmd, respond => {
+				try {
+					cmd.parseParams();
+					if (this._commandHandlers.has(cmd.command)) {
+						const handler = this._commandHandlers.get(cmd.command)!;
+						handler.checkAndHandleCommand(cmd, user, this, respond);
+					} else {
+						respond(MessageTypes.Numerics.Error421UnknownCommand, {
+							originalCommand: cmd.command,
+							suffix: 'Unknown command'
 						});
-						return;
 					}
-					user.sendNumericReply(MessageTypes.Numerics.Error461NeedMoreParams, {
-						originalCommand: e.command,
-						suffix: 'Not enough parameters'
-					});
-					return;
-				}
-				if (e instanceof ParameterRequirementMismatchError) {
-					if (e.paramSpec.type === 'channel' || e.paramSpec.type === 'channelList') {
-						user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
-							channel: e.givenValue,
-							suffix: 'No such channel'
-						});
-						return;
+				} catch (e) {
+					if (e instanceof NotEnoughParametersError) {
+						if (e.command === 'NICK') {
+							respond(MessageTypes.Numerics.Error431NoNickNameGiven, {
+								suffix: 'No nick name given'
+							});
+						} else {
+							respond(MessageTypes.Numerics.Error461NeedMoreParams, {
+								originalCommand: e.command,
+								suffix: 'Not enough parameters'
+							});
+						}
+					} else if (e instanceof ParameterRequirementMismatchError) {
+						if (e.paramSpec.type === 'channel' || e.paramSpec.type === 'channelList') {
+							respond(MessageTypes.Numerics.Error403NoSuchChannel, {
+								channel: e.givenValue,
+								suffix: 'No such channel'
+							});
+							return;
+						}
+						console.error(`Error processing command (parameter mismatch): "${line}"`);
+						console.error(e);
+					} else {
+						console.error(`Error processing command (unknown error): "${line}"`);
+						console.error(e);
 					}
 				}
-
-				console.error(`Error processing command: "${line}"`);
-				console.error(e);
-			}
+			});
 		});
 		user.onRegister(() => {
 			this._nickUserMap.set(this._caseFoldString(user.nick!), user);
-			user.sendNumericReply(MessageTypes.Numerics.Reply001Welcome, {
+			user.sendNumeric(MessageTypes.Numerics.Reply001Welcome, {
 				welcomeText: 'the server welcomes you!'
 			});
-			user.sendNumericReply(MessageTypes.Numerics.Reply002YourHost, {
+			user.sendNumeric(MessageTypes.Numerics.Reply002YourHost, {
 				yourHost: `Your host is ${this._serverAddress}, running version ${this._version}`
 			});
-			user.sendNumericReply(MessageTypes.Numerics.Reply003Created, {
+			user.sendNumeric(MessageTypes.Numerics.Reply003Created, {
 				createdText: `This server was created ${this._startupTime.toISOString()}`
 			});
 			const channelModes = this.supportedChannelModes;
-			user.sendNumericReply(MessageTypes.Numerics.Reply004ServerInfo, {
+			user.sendNumeric(MessageTypes.Numerics.Reply004ServerInfo, {
 				serverName: this._serverAddress,
 				version: this._version,
 				userModes: this.supportedUserModes,
@@ -306,7 +330,7 @@ export class Server {
 				['TOPICLEN', this._topicLength.toString()]
 			]);
 			if (user.modesAsString) {
-				user.sendNumericReply(MessageTypes.Numerics.Reply221UmodeIs, {
+				user.sendNumeric(MessageTypes.Numerics.Reply221UmodeIs, {
 					modes: user.modesAsString
 				});
 			}
@@ -329,7 +353,7 @@ export class Server {
 	}
 
 	sendMotd(user: User): void {
-		user.sendNumericReply(MessageTypes.Numerics.Error422NoMotd, {
+		user.sendNumeric(MessageTypes.Numerics.Error422NoMotd, {
 			suffix: 'MOTD File is missing'
 		});
 	}
@@ -348,45 +372,29 @@ export class Server {
 			MessageTypes.Numerics.Reply005Isupport.COMMAND.length -
 			user.connectionIdentifier.length;
 
-		let currentLine = '';
-		for (const [tokenName, tokenValue] of tokens) {
-			const tokenSize = tokenName.length + tokenValue.length + 1;
-			if (tokenSize > limit) {
-				console.warn(
-					`ISUPPORT token too long: ${tokenName}=${tokenValue} (max length ${limit}, actual ${tokenSize})`
-				);
-			} else if (currentLine.length + tokenSize + 1 > limit) {
-				user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
-					supports: currentLine,
-					suffix: 'are supported by this server'
-				});
-				currentLine = `${tokenName}=${tokenValue}`;
-			} else {
-				if (currentLine.length) {
-					currentLine += ' ';
-				}
-				currentLine += `${tokenName}=${tokenValue}`;
-			}
-		}
-		if (currentLine) {
-			user.sendNumericReply(MessageTypes.Numerics.Reply005Isupport, {
-				supports: currentLine,
+		const lines = joinChunks(
+			tokens.map(([name, value]) => `${name}=${value}`),
+			limit
+		);
+		for (const supports of lines) {
+			user.sendNumeric(MessageTypes.Numerics.Reply005Isupport, {
+				supports,
 				suffix: 'are supported by this server'
 			});
 		}
 	}
 
-	joinChannel(user: User, channel: string | Channel): void {
+	joinChannel(user: User, channel: string | Channel, respond: SendResponseCallback): void {
 		const channelName = typeof channel === 'string' ? channel : channel.name;
 		if (user.channels.size >= this._channelLimit) {
-			user.sendNumericReply(MessageTypes.Numerics.Error405TooManyChannels, {
+			respond(MessageTypes.Numerics.Error405TooManyChannels, {
 				channel: channelName,
 				suffix: 'You have joined too many channels'
 			});
 			return;
 		}
 		if (channelName.length > this._channelLength) {
-			user.sendNumericReply(MessageTypes.Numerics.Error479BadChanName, {
+			respond(MessageTypes.Numerics.Error479BadChanName, {
 				channel: channelName,
 				suffix: 'Illegal channel name'
 			});
@@ -398,19 +406,25 @@ export class Server {
 			let channelObject = this._channels.get(foldedName);
 			if (!channelObject) {
 				isFirst = true;
+				const res = this.callHook('channelCreate', channel, user, respond);
+				if (res === ModuleResult.DENY) {
+					return;
+				}
 				channelObject = new Channel(channel, user, this);
 				this._channels.set(foldedName, channelObject);
 			}
 			channel = channelObject;
 		}
 
-		const res = this.callHook('channelJoin', channel, user);
+		const res = this.callHook('channelJoin', channel, user, respond);
 		if (res === ModuleResult.DENY) {
 			if (isFirst) {
 				this._channels.delete(this._caseFoldString(channel.name));
 			}
 			return;
 		}
+
+		this.callHook('afterChannelCreate', channel, user, respond);
 
 		if (channel.users.has(user)) {
 			return;
@@ -420,24 +434,33 @@ export class Server {
 		channel.addUser(user, isFirst);
 
 		channel.broadcastMessage(
-			this.createMessage(
-				MessageTypes.Commands.ChannelJoin,
-				{
-					channel: channel.name
-				},
-				user.prefix
-			)
+			MessageTypes.Commands.ChannelJoin,
+			{
+				channel: channel.name
+			},
+			user.prefix,
+			undefined,
+			user
 		);
-		channel.sendTopic(user, false);
 
-		channel.sendNames(user);
+		respond(
+			MessageTypes.Commands.ChannelJoin,
+			{
+				channel: channel.name
+			},
+			user.prefix
+		);
+
+		channel.sendTopic(user, respond, false);
+
+		channel.sendNames(user, respond);
 	}
 
-	partChannel(user: User, channel: string | Channel, reason?: string): void {
+	partChannel(user: User, channel: string | Channel, respond: SendResponseCallback, reason?: string): void {
 		if (typeof channel === 'string') {
 			const channelObject = this.getChannelByName(channel);
 			if (!channelObject) {
-				user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
+				respond(MessageTypes.Numerics.Error403NoSuchChannel, {
 					channel,
 					suffix: 'No such channel'
 				});
@@ -447,21 +470,30 @@ export class Server {
 		}
 
 		if (!channel.users.has(user)) {
-			user.sendNumericReply(MessageTypes.Numerics.Error442NotOnChannel, {
+			respond(MessageTypes.Numerics.Error442NotOnChannel, {
 				channel: channel.name,
 				suffix: "You're not on that channel"
 			});
 		}
 
+		respond(
+			MessageTypes.Commands.ChannelPart,
+			{
+				channel: channel.name,
+				reason
+			},
+			user.prefix
+		);
+
 		channel.broadcastMessage(
-			this.createMessage(
-				MessageTypes.Commands.ChannelPart,
-				{
-					channel: channel.name,
-					reason
-				},
-				user.prefix
-			)
+			MessageTypes.Commands.ChannelPart,
+			{
+				channel: channel.name,
+				reason
+			},
+			user.prefix,
+			undefined,
+			user
 		);
 
 		this.unlinkUserFromChannel(user, channel);
@@ -488,10 +520,9 @@ export class Server {
 
 	killUser(user: User, reason?: string, sender?: string): void {
 		const quitMessage = `Killed (${sender ?? this._serverAddress} (${reason ?? 'no reason'}))`;
-		const msg = createMessage(MessageTypes.Commands.ErrorMessage, {
+		user.sendMessage(MessageTypes.Commands.ErrorMessage, {
 			content: `Closing Link: ${this._serverAddress} (${quitMessage})`
 		});
-		user.sendMessage(msg);
 		this.quitUser(user, quitMessage);
 	}
 
@@ -500,9 +531,8 @@ export class Server {
 			return;
 		}
 		if (user.isRegistered) {
-			this.broadcastToCommonChannelUsers(
-				user,
-				this.createMessage(
+			this.forEachCommonChannelUser(user, commonUser =>
+				commonUser.sendMessage(
 					MessageTypes.Commands.ClientQuit,
 					{
 						message
@@ -535,13 +565,12 @@ export class Server {
 	destroyChannel(channel: Channel): void {
 		// usually, this should only happen when a channel is empty, but we kick everyone just in case
 		for (const user of channel.users) {
-			const msg = this.createMessage(MessageTypes.Commands.ChannelKick, {
+			user.sendMessage(MessageTypes.Commands.ChannelKick, {
 				// people in channels should have a nick
 				target: user.nick!,
 				channel: channel.name,
 				comment: 'Channel is being destroyed'
 			});
-			user.sendMessage(msg);
 			this.unlinkUserFromChannel(user, channel);
 		}
 
@@ -550,13 +579,13 @@ export class Server {
 
 	createMessage<T extends Message>(
 		type: MessageConstructor<T>,
-		params: Partial<MessageParamValues<T>>,
+		params: MessageParamValues<T>,
 		prefix: MessagePrefix = this.serverPrefix
 	): T {
 		return createMessage(type, params, prefix, undefined, undefined, true);
 	}
 
-	broadcastToCommonChannelUsers(user: User, msg: Message): void {
+	forEachCommonChannelUser(user: User, cb: (commonUser: User) => void): void {
 		const commonUsers = new Set<User>();
 
 		for (const channel of user.channels) {
@@ -568,7 +597,7 @@ export class Server {
 		}
 
 		for (const commonUser of commonUsers) {
-			commonUser.sendMessage(msg);
+			cb(commonUser);
 		}
 	}
 
@@ -578,6 +607,33 @@ export class Server {
 
 	findModeByName(name: string, type: ModeType): ModeHandler | undefined {
 		return Array.from(this._registeredModes).find(mode => mode.type === type && mode.name === name);
+	}
+
+	get capabilityNames(): string[] {
+		return Array.from(this._capabilities.keys());
+	}
+
+	getCapabilityByName(name: string): Capability | null {
+		return this._capabilities.get(name) ?? null;
+	}
+
+	addCapability(capability: Capability): void {
+		// TODO removeCapability
+		this._capabilities.set(capability.name, capability);
+		if (capability.messageTypes) {
+			for (const cmd of capability.messageTypes) {
+				this._knownCommands.set(cmd.COMMAND, cmd);
+			}
+		}
+		for (const user of this._users) {
+			if ((user.capabilityNegotiationVersion ?? 0) >= 302 || user.hasCapability(CoreCapabilities.CapNotify)) {
+				user.sendMessage(MessageTypes.Commands.CapabilityNegotiation, {
+					target: user.connectionIdentifier,
+					subCommand: 'NEW',
+					capabilities: capability.name
+				});
+			}
+		}
 	}
 
 	loadModule<T extends Module>(moduleClass: new () => T): void {
@@ -604,15 +660,15 @@ export class Server {
 	}
 
 	addCommand(command: CommandHandler): boolean {
-		if (this._commands.has(command.command)) {
+		if (this._commandHandlers.has(command.command)) {
 			return false;
 		}
-		this._commands.set(command.command, command);
+		this._commandHandlers.set(command.command, command);
 		return true;
 	}
 
 	removeCommand(command: CommandHandler): void {
-		this._commands.delete(command.command);
+		this._commandHandlers.delete(command.command);
 	}
 
 	callHook<HookType extends keyof ModuleHookTypes>(
@@ -631,6 +687,10 @@ export class Server {
 		}
 
 		return result;
+	}
+
+	getRedirectableClientTags(cmd: Message): Map<string, string> {
+		return new Map<string, string>(Array.from(cmd.tags.entries()).filter(([key]) => key.startsWith('+')));
 	}
 
 	private _caseFoldString(str: string) {

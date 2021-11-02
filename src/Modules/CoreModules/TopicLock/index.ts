@@ -1,3 +1,4 @@
+import type { SendResponseCallback } from '../../../SendResponseCallback';
 import { Module, ModuleResult } from '../../Module';
 import { MessageTypes } from 'ircv3';
 import type { Channel } from '../../../Channel';
@@ -11,12 +12,12 @@ export class TopicLockModule extends Module {
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._topicLockMode);
 		components.addHook('preTopicChange', this.onPreTopicChange);
-		components.addHook('channelCreate', this.onChannelCreate);
+		components.addHook('afterChannelCreate', this.onChannelCreate);
 	}
 
-	onPreTopicChange = (channel: Channel, user: User): ModuleResult => {
+	onPreTopicChange = (channel: Channel, user: User, _: string, respond: SendResponseCallback): ModuleResult => {
 		if (channel.hasModeSet(this._topicLockMode) && !channel.isUserAtLeast(user, 'op')) {
-			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
+			respond(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 				channel: channel.name,
 				suffix: 'You do not have access to change the topic on this channel'
 			});

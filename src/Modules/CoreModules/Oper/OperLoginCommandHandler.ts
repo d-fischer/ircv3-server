@@ -1,4 +1,5 @@
 import { MessageTypes } from 'ircv3';
+import type { SendResponseCallback } from '../../../SendResponseCallback';
 import type { Server } from '../../../Server';
 import type { User } from '../../../User';
 import { CommandHandler } from '../../../Commands/CommandHandler';
@@ -13,15 +14,20 @@ export class OperLoginCommandHandler extends CommandHandler<MessageTypes.Command
 		super(MessageTypes.Commands.OperLogin);
 	}
 
-	handleCommand(cmd: MessageTypes.Commands.OperLogin, user: User, server: Server): void {
+	handleCommand(
+		cmd: MessageTypes.Commands.OperLogin,
+		user: User,
+		server: Server,
+		respond: SendResponseCallback
+	): void {
 		const resultingLogin = server.loginAsOper(cmd.params.name, cmd.params.password);
 		if (resultingLogin) {
-			user.sendNumericReply(MessageTypes.Numerics.Reply381YoureOper, {
+			respond(MessageTypes.Numerics.Reply381YoureOper, {
 				suffix: 'You are now an IRC operator'
 			});
-			user.giveMode(resultingLogin.global ? this._globalOperMode : this._localOperMode);
+			user.giveMode(resultingLogin.global ? this._globalOperMode : this._localOperMode, undefined, respond);
 		} else {
-			user.sendNumericReply(MessageTypes.Numerics.Error491NoOperHost, {
+			respond(MessageTypes.Numerics.Error491NoOperHost, {
 				suffix: 'No appropriate operator blocks were found for your host'
 			});
 		}

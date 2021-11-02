@@ -1,3 +1,4 @@
+import type { SendResponseCallback } from '../../../SendResponseCallback';
 import { Module, ModuleResult } from '../../Module';
 import type { Channel } from '../../../Channel';
 import type { User } from '../../../User';
@@ -10,14 +11,15 @@ export class NoExternalMessagesModule extends Module {
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._noExternalMessagesMode);
-		components.addHook('channelMessage', this.onChannelMessageOrNotice);
-		components.addHook('channelNotice', this.onChannelMessageOrNotice);
-		components.addHook('channelCreate', this.onChannelCreate);
+		components.addHook('channelMessage', (channel, user, _, respond) => this.handle(channel, user, respond));
+		components.addHook('channelNotice', (channel, user, _, respond) => this.handle(channel, user, respond));
+		components.addHook('channelTagMessage', this.handle);
+		components.addHook('afterChannelCreate', this.onChannelCreate);
 	}
 
-	onChannelMessageOrNotice = (channel: Channel, user: User): ModuleResult => {
+	handle = (channel: Channel, user: User, respond: SendResponseCallback): ModuleResult => {
 		if (channel.hasModeSet(this._noExternalMessagesMode) && !channel.containsUser(user)) {
-			user.sendNumericReply(MessageTypes.Numerics.Error404CanNotSendToChan, {
+			respond(MessageTypes.Numerics.Error404CanNotSendToChan, {
 				channel: channel.name,
 				suffix: 'Cannot send to channel'
 			});

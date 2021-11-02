@@ -1,3 +1,4 @@
+import type { SendResponseCallback } from '../../SendResponseCallback';
 import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
@@ -8,17 +9,20 @@ export class ChannelPartHandler extends CommandHandler<MessageTypes.Commands.Cha
 		super(MessageTypes.Commands.ChannelPart);
 	}
 
-	handleCommand(cmd: MessageTypes.Commands.ChannelPart, user: User, server: Server): void {
-		user.ifRegistered(() => {
-			const channelName = cmd.params.channel;
-			if (!isChannel(channelName)) {
-				user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
-					channel: channelName,
-					suffix: 'No such channel'
-				});
-				return;
-			}
-			server.partChannel(user, channelName, cmd.params.reason);
-		});
+	handleCommand(
+		cmd: MessageTypes.Commands.ChannelPart,
+		user: User,
+		server: Server,
+		respond: SendResponseCallback
+	): void {
+		const channelName = cmd.params.channel;
+		if (!isChannel(channelName)) {
+			respond(MessageTypes.Numerics.Error403NoSuchChannel, {
+				channel: channelName,
+				suffix: 'No such channel'
+			});
+			return;
+		}
+		server.partChannel(user, channelName, respond, cmd.params.reason);
 	}
 }

@@ -1,4 +1,5 @@
 import { MessageTypes } from 'ircv3';
+import type { SendResponseCallback } from '../../SendResponseCallback';
 import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import { assertNever } from '../../Toolkit/TypeTools';
@@ -7,9 +8,15 @@ import type { Server } from '../../Server';
 export class NickChangeHandler extends CommandHandler<MessageTypes.Commands.NickChange> {
 	constructor() {
 		super(MessageTypes.Commands.NickChange);
+		this._requiresRegistration = false;
 	}
 
-	handleCommand(cmd: MessageTypes.Commands.NickChange, user: User, server: Server): void {
+	handleCommand(
+		cmd: MessageTypes.Commands.NickChange,
+		user: User,
+		server: Server,
+		respond: SendResponseCallback
+	): void {
 		const registered = user.isRegistered;
 		const newNick = cmd.params.nick;
 		if (newNick === user.nick) {
@@ -19,14 +26,14 @@ export class NickChangeHandler extends CommandHandler<MessageTypes.Commands.Nick
 		const result = user.setNick(newNick);
 		switch (result.result) {
 			case 'invalid': {
-				user.sendNumericReply(MessageTypes.Numerics.Error432ErroneusNickname, {
+				respond(MessageTypes.Numerics.Error432ErroneusNickname, {
 					nick: newNick,
 					suffix: 'This nick is invalid'
 				});
 				break;
 			}
 			case 'inUse': {
-				user.sendNumericReply(MessageTypes.Numerics.Error433NickNameInUse, {
+				respond(MessageTypes.Numerics.Error433NickNameInUse, {
 					nick: newNick,
 					suffix: 'Nick already in use'
 				});
@@ -34,15 +41,22 @@ export class NickChangeHandler extends CommandHandler<MessageTypes.Commands.Nick
 			}
 			case 'ok': {
 				if (registered) {
-					const msg = server.createMessage(
+					respond(
 						MessageTypes.Commands.NickChange,
 						{
 							nick: result.newNick
 						},
 						oldPrefix
 					);
-					user.sendMessage(msg);
-					server.broadcastToCommonChannelUsers(user, msg);
+					server.forEachCommonChannelUser(user, commonUser => {
+						commonUser.sendMessage(
+							MessageTypes.Commands.NickChange,
+							{
+								nick: result.newNick
+							},
+							oldPrefix
+						);
+					});
 				}
 				break;
 			}

@@ -6,6 +6,7 @@ import type { Server } from '../../Server';
 export class ClientQuitHandler extends CommandHandler<MessageTypes.Commands.ClientQuit> {
 	constructor() {
 		super(MessageTypes.Commands.ClientQuit);
+		this._requiresRegistration = false;
 	}
 
 	handleCommand(cmd: MessageTypes.Commands.ClientQuit, user: User, server: Server): void {

@@ -1,3 +1,4 @@
+import type { SendResponseCallback } from '../../SendResponseCallback';
 import { CommandHandler } from '../CommandHandler';
 import { MessageTypes } from 'ircv3';
 import type { User } from '../../User';
@@ -9,13 +10,17 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 	}
 
 	handleCommand(
-		{ params: { channel: channelName, target, comment } }: MessageTypes.Commands.ChannelKick,
+		cmd: MessageTypes.Commands.ChannelKick,
 		user: User,
-		server: Server
+		server: Server,
+		respond: SendResponseCallback
 	): void {
+		const {
+			params: { channel: channelName, target, comment }
+		} = cmd;
 		const channel = server.getChannelByName(channelName);
 		if (!channel) {
-			user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
+			respond(MessageTypes.Numerics.Error403NoSuchChannel, {
 				channel: channelName,
 				suffix: 'No such channel'
 			});
@@ -23,7 +28,7 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 		}
 
 		if (!channel.containsUser(user)) {
-			user.sendNumericReply(MessageTypes.Numerics.Error442NotOnChannel, {
+			respond(MessageTypes.Numerics.Error442NotOnChannel, {
 				channel: channel.name,
 				suffix: "You're not on that channel"
 			});
@@ -31,7 +36,7 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 		}
 
 		if (!channel.isUserAtLeast(user, 'halfop')) {
-			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
+			respond(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 				channel: channel.name,
 				suffix: 'You need channel privileges to do this'
 			});
@@ -40,15 +45,15 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 
 		const victim = server.getUserByNick(target);
 		if (!victim) {
-			user.sendNumericReply(MessageTypes.Numerics.Error401NoSuchNick, {
+			respond(MessageTypes.Numerics.Error401NoSuchNick, {
 				nick: target,
 				suffix: 'No such nick'
 			});
 			return;
 		}
 		if (!channel.containsUser(victim)) {
-			user.sendNumericReply(MessageTypes.Numerics.Error441UserNotInChannel, {
-				nick: victim.nick,
+			respond(MessageTypes.Numerics.Error441UserNotInChannel, {
+				nick: victim.nick!,
 				channel: channel.name,
 				suffix: "They are'nt on that channel"
 			});
@@ -57,23 +62,33 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 
 		const victimLevel = channel.getPrefixDefinitionForUser(victim);
 		if (victimLevel && !channel.isUserAtLeast(user, victimLevel.minLevelToSet)) {
-			user.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
+			respond(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 				channel: channel.name,
 				suffix: 'You need channel privileges to do this'
 			});
 			return;
 		}
 
+		respond(
+			MessageTypes.Commands.ChannelKick,
+			{
+				channel: channel.name,
+				target: victim.nick!,
+				comment
+			},
+			user.prefix
+		);
+
 		channel.broadcastMessage(
-			server.createMessage(
-				MessageTypes.Commands.ChannelKick,
-				{
-					channel: channel.name,
-					target: victim.nick,
-					comment
-				},
-				user.prefix
-			)
+			MessageTypes.Commands.ChannelKick,
+			{
+				channel: channel.name,
+				target: victim.nick!,
+				comment
+			},
+			user.prefix,
+			undefined,
+			user
 		);
 		server.unlinkUserFromChannel(victim, channel);
 	}

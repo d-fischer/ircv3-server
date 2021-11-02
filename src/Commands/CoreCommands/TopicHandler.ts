@@ -1,4 +1,5 @@
 import { MessageTypes } from 'ircv3';
+import type { SendResponseCallback } from '../../SendResponseCallback';
 import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
@@ -9,29 +10,27 @@ export class TopicHandler extends CommandHandler<MessageTypes.Commands.Topic> {
 		super(MessageTypes.Commands.Topic);
 	}
 
-	handleCommand(cmd: MessageTypes.Commands.Topic, user: User, server: Server): void {
-		user.ifRegistered(() => {
-			const { channel: channelName, newTopic } = cmd.params;
+	handleCommand(cmd: MessageTypes.Commands.Topic, user: User, server: Server, respond: SendResponseCallback): void {
+		const { channel: channelName, newTopic } = cmd.params;
 
-			if (channelName) {
-				const channel = server.getChannelByName(channelName);
+		if (channelName) {
+			const channel = server.getChannelByName(channelName);
 
-				if (channel) {
-					if (newTopic) {
-						const result = server.callHook('preTopicChange', channel, user, newTopic);
-						if (result !== ModuleResult.DENY) {
-							channel.changeTopic(newTopic.slice(0, server.topicLength), user);
-						}
-					} else {
-						channel.sendTopic(user);
+			if (channel) {
+				if (newTopic) {
+					const result = server.callHook('preTopicChange', channel, user, newTopic, respond);
+					if (result !== ModuleResult.DENY) {
+						channel.changeTopic(newTopic.slice(0, server.topicLength), user, respond);
 					}
-					return;
+				} else {
+					channel.sendTopic(user, respond);
 				}
+				return;
 			}
-			user.sendNumericReply(MessageTypes.Numerics.Error403NoSuchChannel, {
-				channel: channelName,
-				suffix: 'No such channel'
-			});
+		}
+		respond(MessageTypes.Numerics.Error403NoSuchChannel, {
+			channel: channelName,
+			suffix: 'No such channel'
 		});
 	}
 }

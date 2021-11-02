@@ -5,30 +5,30 @@ import type { Server } from '../../Server';
 import { isChannel, MessageTypes } from 'ircv3';
 import { ModuleResult } from '../../Modules/Module';
 
-export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.PrivateMessage> {
+export class TagMessageHandler extends CommandHandler<MessageTypes.Commands.TagMessage> {
 	constructor() {
-		super(MessageTypes.Commands.PrivateMessage);
+		super(MessageTypes.Commands.TagMessage);
 	}
 
 	handleCommand(
-		cmd: MessageTypes.Commands.PrivateMessage,
+		cmd: MessageTypes.Commands.TagMessage,
 		user: User,
 		server: Server,
 		respond: SendResponseCallback
 	): void {
 		// TODO multi target
+
 		if (isChannel(cmd.params.target)) {
 			const channel = server.getChannelByName(cmd.params.target);
 
 			if (channel) {
-				const result = server.callHook('channelMessage', channel, user, cmd.params.content, respond);
+				const result = server.callHook('channelTagMessage', channel, user, respond);
 				if (result !== ModuleResult.DENY) {
 					const clientTags = server.getRedirectableClientTags(cmd);
 					channel.broadcastMessage(
-						MessageTypes.Commands.PrivateMessage,
+						MessageTypes.Commands.TagMessage,
 						{
-							target: channel.name,
-							content: cmd.params.content
+							target: channel.name
 						},
 						user.prefix,
 						{
@@ -49,10 +49,9 @@ export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.Private
 			if (otherUser) {
 				const clientTags = server.getRedirectableClientTags(cmd);
 				otherUser.sendMessage(
-					MessageTypes.Commands.PrivateMessage,
+					MessageTypes.Commands.TagMessage,
 					{
-						target: otherUser.nick!,
-						content: cmd.params.content
+						target: otherUser.nick!
 					},
 					user.prefix,
 					{

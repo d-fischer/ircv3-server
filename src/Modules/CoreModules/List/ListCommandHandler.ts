@@ -1,5 +1,6 @@
 import { MessageTypes } from 'ircv3';
 import { CommandHandler } from '../../../Commands/CommandHandler';
+import type { SendResponseCallback } from '../../../SendResponseCallback';
 import type { Server } from '../../../Server';
 import type { User } from '../../../User';
 
@@ -7,7 +8,13 @@ export class ListCommandHandler extends CommandHandler<MessageTypes.Commands.Cha
 	constructor() {
 		super(MessageTypes.Commands.ChannelList);
 	}
-	handleCommand(cmd: MessageTypes.Commands.ChannelList, user: User, server: Server): void {
+
+	handleCommand(
+		cmd: MessageTypes.Commands.ChannelList,
+		user: User,
+		server: Server,
+		respond: SendResponseCallback
+	): void {
 		// TODO implement some ELIST tokens
 		let channels = server.channels;
 		if (cmd.params.channel) {
@@ -15,13 +22,13 @@ export class ListCommandHandler extends CommandHandler<MessageTypes.Commands.Cha
 			channels = new Map([...channels].filter(([name]) => channelList.includes(name)));
 		}
 		for (const [, channel] of channels) {
-			user.sendNumericReply(MessageTypes.Numerics.Reply322List, {
+			respond(MessageTypes.Numerics.Reply322List, {
 				channel: channel.name,
 				memberCount: channel.users.size.toString(),
 				topic: channel.topic
 			});
 		}
-		user.sendNumericReply(MessageTypes.Numerics.Reply323ListEnd, {
+		respond(MessageTypes.Numerics.Reply323ListEnd, {
 			suffix: 'End of LIST'
 		});
 	}

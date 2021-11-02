@@ -1,7 +1,9 @@
-import type { Message, SingleMode } from 'ircv3';
+import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
 import { MessageTypes, prefixToString } from 'ircv3';
 import type { ModeHandler } from './Modes/ModeHandler';
 import type { ModeHolder } from './Modes/ModeHolder';
+import type { SendableMessageProperties } from './SendableMessageProperties';
+import type { SendResponseCallback } from './SendResponseCallback';
 import type { InternalAccessLevelDefinition, Server } from './Server';
 import type { ModeState } from './Toolkit/ModeTools';
 import { sortStringByOrder } from './Toolkit/StringTools';
@@ -22,9 +24,7 @@ export class Channel implements ModeHolder {
 		a.letter.localeCompare(b.letter) ||
 		(a.param && b.param ? a.param.localeCompare(b.param) : 0);
 
-	constructor(private readonly _name: string, creator: User, private readonly _server: Server) {
-		_server.callHook('channelCreate', this, creator);
-	}
+	constructor(private readonly _name: string, creator: User, private readonly _server: Server) {}
 
 	addUser(user: User, isFirst: boolean = false): void {
 		this._userAccess.set(user, isFirst ? 'o' : '');
@@ -70,7 +70,7 @@ export class Channel implements ModeHolder {
 		return [letters, ...params].join(' ');
 	}
 
-	processModes(changes: SingleMode[], source: User): void {
+	processModes(changes: SingleMode[], source: User, respond: SendResponseCallback): void {
 		const resultingModes = this._modes.slice();
 		const resultingAccess = new Map<User, string>(this._userAccess);
 		const filteredChanges: SingleMode[] = [];
@@ -81,14 +81,14 @@ export class Channel implements ModeHolder {
 			if (isPrefix) {
 				const foundPrefix = this._server.getPrefixDefinitionByModeChar(mode.letter);
 				if (!foundPrefix || !this.isUserAtLeast(source, foundPrefix.minLevelToSet, resultingAccess)) {
-					source.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
+					respond(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 						channel: this._name,
 						suffix: 'You need channel privileges to do this'
 					});
 					continue;
 				}
 			} else if (!modeDescriptor.canSetOn(this, source, this._server, adding, mode.param)) {
-				source.sendNumericReply(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
+				respond(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 					channel: this._name,
 					suffix: 'You need channel privileges to do this'
 				});
@@ -99,7 +99,7 @@ export class Channel implements ModeHolder {
 					const userNick = mode.param!;
 					const user = this._server.getUserByNick(userNick);
 					if (!user) {
-						source.sendNumericReply(MessageTypes.Numerics.Error401NoSuchNick, {
+						respond(MessageTypes.Numerics.Error401NoSuchNick, {
 							nick: userNick,
 							suffix: 'No such nick'
 						});
@@ -148,7 +148,7 @@ export class Channel implements ModeHolder {
 					const userNick = mode.param!;
 					const user = this._server.getUserByNick(userNick);
 					if (!user) {
-						source.sendNumericReply(MessageTypes.Numerics.Error401NoSuchNick, {
+						respond(MessageTypes.Numerics.Error401NoSuchNick, {
 							nick: userNick,
 							suffix: 'No such nick'
 						});
@@ -208,70 +208,81 @@ export class Channel implements ModeHolder {
 		this._modes = resultingModes.sort(Channel.stateSorter);
 		this._userAccess = resultingAccess;
 
-		this.broadcastMessage(
-			this._server.createMessage(
-				MessageTypes.Commands.Mode,
-				{
-					target: this._name,
-					modes: filteredChanges
-						.sort(Channel.actionSorter)
-						.reduce(
-							(result, action) => {
-								let [letters, ...params] = result;
-								if (action.action === 'remove') {
-									if (!letters.includes('-')) {
-										letters += '-';
-									}
-								} else if (letters.length === 0) {
-									letters += '+';
-								}
+		const completeModeString = filteredChanges
+			.sort(Channel.actionSorter)
+			.reduce(
+				(result, action) => {
+					let [letters, ...params] = result;
+					if (action.action === 'remove') {
+						if (!letters.includes('-')) {
+							letters += '-';
+						}
+					} else if (letters.length === 0) {
+						letters += '+';
+					}
 
-								letters += action.letter;
+					letters += action.letter;
 
-								if (action.param === undefined) {
-									return [letters, ...params];
-								} else {
-									return [letters, ...params, action.param];
-								}
-							},
-							['']
-						)
-						.join(' ')
+					if (action.param === undefined) {
+						return [letters, ...params];
+					} else {
+						return [letters, ...params, action.param];
+					}
 				},
-				source.prefix
+				['']
 			)
+			.join(' ');
+
+		respond(
+			MessageTypes.Commands.Mode,
+			{
+				target: this._name,
+				modes: completeModeString
+			},
+			source.prefix
+		);
+
+		this.broadcastMessage(
+			MessageTypes.Commands.Mode,
+			{
+				target: this._name,
+				modes: completeModeString
+			},
+			source.prefix,
+			{},
+			source
 		);
 	}
 
-	sendNames(user: User): void {
+	sendNames(user: User, respond: SendResponseCallback): void {
 		// TODO only set allPrefixes to true if indicated by the user
 		const prefixedNicks = this._userAccess.has(user)
 			? this.getPrefixedNicks(true)
 			: this.getPrefixedNicks(true, u => !u.hasMode('invisible'));
-		user.sendNumericReply(MessageTypes.Numerics.Reply353NamesReply, {
+		respond(MessageTypes.Numerics.Reply353NamesReply, {
 			channelType: '=',
 			channel: this.name,
 			names: prefixedNicks.join(' ')
 		});
-		user.sendNumericReply(MessageTypes.Numerics.Reply366EndOfNames, {
+		respond(MessageTypes.Numerics.Reply366EndOfNames, {
 			channel: this.name,
 			suffix: 'End of /NAMES list'
 		});
 	}
 
-	sendTopic(user: User, sendNoTopic: boolean = true): void {
+	sendTopic(user: User, respond: SendResponseCallback, sendNoTopic: boolean = true): void {
 		if (this.topic) {
-			user.sendNumericReply(MessageTypes.Numerics.Reply332Topic, {
+			respond(MessageTypes.Numerics.Reply332Topic, {
 				channel: this.name,
 				topic: this.topic
 			});
-			user.sendNumericReply(MessageTypes.Numerics.Reply333TopicWhoTime, {
+			respond(MessageTypes.Numerics.Reply333TopicWhoTime, {
 				channel: this.name,
 				who: this._topicSetter,
 				ts: (this._topicTime / 1000).toString()
 			});
 		} else if (sendNoTopic) {
-			user.sendNumericReply(MessageTypes.Numerics.Reply331NoTopic, {
+			respond(MessageTypes.Numerics.Reply331NoTopic, {
 				channel: this.name,
 				suffix: 'No topic is set'
 			});
@@ -282,20 +293,29 @@ export class Channel implements ModeHolder {
 		return this._topic;
 	}
 
-	changeTopic(newTopic: string, user: User, ts: number = Date.now()): void {
+	changeTopic(newTopic: string, user: User, respond: SendResponseCallback, ts: number = Date.now()): void {
 		this._topic = newTopic;
 		this._topicTime = ts;
 		this._topicSetter = prefixToString(user.prefix);
 
+		respond(
+			MessageTypes.Commands.Topic,
+			{
+				channel: this.name,
+				newTopic: newTopic
+			},
+			user.prefix
+		);
+
 		this.broadcastMessage(
-			this._server.createMessage(
-				MessageTypes.Commands.Topic,
-				{
-					channel: this.name,
-					newTopic: newTopic
-				},
-				user.prefix
-			)
+			MessageTypes.Commands.Topic,
+			{
+				channel: this.name,
+				newTopic: newTopic
+			},
+			user.prefix,
+			undefined,
+			user
 		);
 	}
 
@@ -340,10 +360,16 @@ export class Channel implements ModeHolder {
 		return entries.map(([user, prefixes]) => this._prefixNick(user.nick!, prefixes, allPrefixes));
 	}
 
-	broadcastMessage(msg: Message, exceptUser?: User): void {
+	broadcastMessage<T extends Message<T>>(
+		type: MessageConstructor<T>,
+		params: MessageParamValues<T>,
+		prefix: MessagePrefix,
+		properties?: SendableMessageProperties,
+		exceptUser?: User | undefined
+	): void {
 		for (const user of this.users) {
 			if (user !== exceptUser) {
-				user.sendMessage(msg);
+				user.sendMessage(type, params, prefix, properties);
 			}
 		}
 	}
