@@ -19,6 +19,7 @@ import {
 import * as net from 'net';
 import { Channel } from './Channel';
 import type { CommandHandler } from './Commands/CommandHandler';
+import { AwayHandler } from './Commands/CoreCommands/AwayHandler';
 import { CapabilityNegotiationHandler } from './Commands/CoreCommands/CapabilityNegotiationHandler';
 import { ChannelJoinHandler } from './Commands/CoreCommands/ChannelJoinHandler';
 import { ChannelKickHandler } from './Commands/CoreCommands/ChannelKickHandler';
@@ -151,6 +152,7 @@ export class Server {
 		this.addCapability(CoreCapabilities.Batch);
 		this.addCapability(CoreCapabilities.LabeledResponse);
 		this.addCapability(CoreCapabilities.CapNotify);
+		this.addCapability(CoreCapabilities.AwayNotify);
 
 		this.addCommand(new CapabilityNegotiationHandler());
 		this.addCommand(new UserRegistrationHandler());
@@ -166,6 +168,7 @@ export class Server {
 		this.addCommand(new TagMessageHandler());
 		this.addCommand(new TopicHandler());
 		this.addCommand(new ChannelKickHandler());
+		this.addCommand(new AwayHandler());
 	}
 
 	addOperLogin(login: OperLogin): void {

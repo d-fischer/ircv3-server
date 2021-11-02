@@ -1,9 +1,9 @@
-import type { SendResponseCallback } from '../../SendResponseCallback';
-import { CommandHandler } from '../CommandHandler';
-import type { User } from '../../User';
-import type { Server } from '../../Server';
 import { isChannel, MessageTypes } from 'ircv3';
 import { ModuleResult } from '../../Modules/Module';
+import type { SendResponseCallback } from '../../SendResponseCallback';
+import type { Server } from '../../Server';
+import type { User } from '../../User';
+import { CommandHandler } from '../CommandHandler';
 
 export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.PrivateMessage> {
 	constructor() {
@@ -48,10 +48,11 @@ export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.Private
 
 			if (otherUser) {
 				const clientTags = server.getRedirectableClientTags(cmd);
+				const nick = otherUser.nick!;
 				otherUser.sendMessage(
 					MessageTypes.Commands.PrivateMessage,
 					{
-						target: otherUser.nick!,
+						target: nick,
 						content: cmd.params.content
 					},
 					user.prefix,
@@ -59,6 +60,13 @@ export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.Private
 						clientTags
 					}
 				);
+
+				if (otherUser.isAway) {
+					respond(MessageTypes.Numerics.Reply301Away, {
+						nick,
+						content: otherUser.awayMessage!
+					});
+				}
 			} else {
 				respond(MessageTypes.Numerics.Error401NoSuchNick, {
 					nick: cmd.params.target,

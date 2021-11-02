@@ -20,8 +20,7 @@ export class UserHostCommandHandler extends CommandHandler<MessageTypes.Commands
 			.map(nick => {
 				const queriedUser = server.getUserByNick(nick)!;
 				const hostName = queriedUser === user ? queriedUser.ipAddress : queriedUser.publicHostName;
-				// TODO use - for away users
-				return `${nick}=+${queriedUser.prefix.user!}@${hostName}`;
+				return `${nick}=${queriedUser.isAway ? '-' : '+'}${queriedUser.prefix.user!}@${hostName}`;
 			})
 			.join(' ');
 

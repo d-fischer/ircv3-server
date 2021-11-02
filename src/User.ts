@@ -45,6 +45,8 @@ export class User extends EventEmitter implements ModeHolder {
 	private _supportsTags = false;
 	private _currentBatchReference = 0;
 
+	private _awayMessage: string | null = null;
+
 	onLine = this.registerEvent<[line: string]>();
 	onRegister = this.registerEvent<[]>();
 	onNickChange = this.registerEvent<[oldNick?: string]>();
@@ -128,6 +130,29 @@ export class User extends EventEmitter implements ModeHolder {
 		);
 	}
 
+	get awayMessage(): string | null {
+		return this._awayMessage;
+	}
+
+	get isAway(): boolean {
+		return this._awayMessage != null;
+	}
+
+	setAwayMessage(msg: string | null): void {
+		this._awayMessage = msg;
+		this._server.forEachCommonChannelUser(this, commonUser => {
+			if (commonUser.hasCapability(CoreCapabilities.AwayNotify)) {
+				commonUser.sendMessage(
+					MessageTypes.Commands.Away,
+					{
+						message: msg ?? undefined
+					},
+					this.prefix
+				);
+			}
+		});
+	}
+
 	giveMode(mode: ModeHandler, param?: string, respond?: SendResponseCallback): void {
 		const sendMessageToUser =
 			respond ??
@@ -184,10 +209,6 @@ export class User extends EventEmitter implements ModeHolder {
 
 	get nick(): string | undefined {
 		return this._nick;
-	}
-
-	get userName(): string | undefined {
-		return this._userName;
 	}
 
 	get publicHostName(): string {
