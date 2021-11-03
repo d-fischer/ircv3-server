@@ -258,8 +258,8 @@ export class Server {
 			const cmd = parseMessage(line, this.serverProperties, this._knownCommands, false, [], false);
 			user.sendResponse(cmd, respond => {
 				try {
-					cmd.parseParams();
 					if (this._commandHandlers.has(cmd.command)) {
+						cmd.parseParams();
 						const handler = this._commandHandlers.get(cmd.command)!;
 						handler.checkAndHandleCommand(cmd, user, this, respond);
 					} else {
