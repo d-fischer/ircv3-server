@@ -30,6 +30,7 @@ import { NamesHandler } from './Commands/CoreCommands/NamesHandler';
 import { NickChangeHandler } from './Commands/CoreCommands/NickChangeHandler';
 import { NoticeHandler } from './Commands/CoreCommands/NoticeHandler';
 import { PingHandler } from './Commands/CoreCommands/PingHandler';
+import { PongHandler } from './Commands/CoreCommands/PongHandler';
 import { PrivmsgHandler } from './Commands/CoreCommands/PrivmsgHandler';
 import { TagMessageHandler } from './Commands/CoreCommands/TagMessageHandler';
 import { TopicHandler } from './Commands/CoreCommands/TopicHandler';
@@ -160,6 +161,7 @@ export class Server {
 		this.addCommand(new NickChangeHandler());
 		this.addCommand(new ClientQuitHandler());
 		this.addCommand(new PingHandler());
+		this.addCommand(new PongHandler());
 		this.addCommand(new PrivmsgHandler());
 		this.addCommand(new NoticeHandler());
 		this.addCommand(new ModeCommandHandler());
