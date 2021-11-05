@@ -90,6 +90,7 @@ export class Server {
 		(
 			[
 				'channelCreate',
+				'afterChannelCreate',
 				'channelJoin',
 				'channelMessage',
 				'channelNotice',
