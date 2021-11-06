@@ -99,7 +99,8 @@ export class Server {
 				'modeChange',
 				'preTopicChange',
 				'userCreate',
-				'userDestroy'
+				'userDestroy',
+				'channelCheckVisibility'
 			] as Array<keyof ModuleHookTypes>
 		).map((hookName): [keyof ModuleHookTypes, Set<ModuleHook<never>>] => [hookName, new Set<ModuleHook<never>>()])
 	);

@@ -5,6 +5,10 @@ import type { SendResponseCallback } from '../SendResponseCallback';
 import type { User } from '../User';
 import type { Module, ModuleResult } from './Module';
 
+export interface ChannelVisibilityResult {
+	secret: boolean;
+}
+
 export interface ModuleHookTypes {
 	channelCreate: (channelName: string, user: User, respond: SendResponseCallback) => ModuleResult;
 	afterChannelCreate: (channel: Channel, user: User, respond: SendResponseCallback) => ModuleResult;
@@ -16,6 +20,7 @@ export interface ModuleHookTypes {
 	preTopicChange: (channel: Channel, user: User, topic: string, respond: SendResponseCallback) => ModuleResult;
 	userCreate: (user: User) => ModuleResult;
 	userDestroy: (user: User) => ModuleResult;
+	channelCheckVisibility: (channel: Channel, user: User, result: ChannelVisibilityResult) => ModuleResult;
 }
 
 export class ModuleHook<HookType extends keyof ModuleHookTypes> {

@@ -3,6 +3,7 @@ import { CommandHandler } from '../../../Commands/CommandHandler';
 import type { SendResponseCallback } from '../../../SendResponseCallback';
 import type { Server } from '../../../Server';
 import type { User } from '../../../User';
+import type { ChannelVisibilityResult } from '../../ModuleHook';
 
 export class ListCommandHandler extends CommandHandler<MessageTypes.Commands.ChannelList> {
 	constructor() {
@@ -22,11 +23,28 @@ export class ListCommandHandler extends CommandHandler<MessageTypes.Commands.Cha
 			channels = new Map([...channels].filter(([name]) => channelList.includes(name)));
 		}
 		for (const [, channel] of channels) {
-			respond(MessageTypes.Numerics.Reply322List, {
-				channel: channel.name,
-				memberCount: channel.users.size.toString(),
-				topic: channel.topic
-			});
+			let visible = false;
+			if (channel.containsUser(user)) {
+				visible = true;
+			} else {
+				const visibility: ChannelVisibilityResult = {
+					secret: false
+				};
+
+				server.callHook('channelCheckVisibility', channel, user, visibility);
+
+				if (!visibility.secret) {
+					visible = true;
+				}
+			}
+
+			if (visible) {
+				respond(MessageTypes.Numerics.Reply322List, {
+					channel: channel.name,
+					memberCount: channel.users.size.toString(),
+					topic: channel.topic
+				});
+			}
 		}
 		respond(MessageTypes.Numerics.Reply323ListEnd, {
 			suffix: 'End of LIST'

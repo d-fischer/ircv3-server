@@ -4,6 +4,7 @@ import { KillModule } from './Modules/CoreModules/Kill';
 import { ListModule } from './Modules/CoreModules/List';
 import { NoExternalMessagesModule } from './Modules/CoreModules/NoExternalMessages';
 import { OperModule } from './Modules/CoreModules/Oper';
+import { SecretModule } from './Modules/CoreModules/Secret';
 import { TimeModule } from './Modules/CoreModules/Time';
 import { TopicLockModule } from './Modules/CoreModules/TopicLock';
 import { UserHostModule } from './Modules/CoreModules/UserHost';
@@ -17,6 +18,7 @@ server.loadModule(InvisibleModule);
 
 server.loadModule(NoExternalMessagesModule);
 server.loadModule(TopicLockModule);
+server.loadModule(SecretModule);
 
 server.loadModule(InviteModule);
 
