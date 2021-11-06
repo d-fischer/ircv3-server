@@ -3,6 +3,7 @@ import { Module, ModuleResult } from '../../Module';
 import { MessageTypes } from 'ircv3';
 import type { Channel } from '../../../Channel';
 import type { User } from '../../../User';
+import type { ChannelCreateFlags } from '../../ModuleHook';
 import { TopicLockModeHandler } from './TopicLockModeHandler';
 import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 
@@ -27,8 +28,8 @@ export class TopicLockModule extends Module {
 		return ModuleResult.NEXT;
 	};
 
-	onChannelCreate = (channel: Channel): ModuleResult => {
-		channel.addMode(this._topicLockMode);
+	onChannelCreate = (channel: Channel, user: User, result: ChannelCreateFlags): ModuleResult => {
+		result.modesToSet.push({ mode: this._topicLockMode });
 
 		return ModuleResult.NEXT;
 	};

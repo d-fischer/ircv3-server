@@ -2,6 +2,7 @@ import type { SingleMode } from 'ircv3';
 import type { Channel } from '../Channel';
 import type { ModeHolder } from '../Modes/ModeHolder';
 import type { SendResponseCallback } from '../SendResponseCallback';
+import type { ModeState } from '../Toolkit/ModeTools';
 import type { User } from '../User';
 import type { Module, ModuleResult } from './Module';
 
@@ -9,9 +10,13 @@ export interface ChannelVisibilityResult {
 	secret: boolean;
 }
 
+export interface ChannelCreateFlags {
+	modesToSet: ModeState[];
+}
+
 export interface ModuleHookTypes {
 	channelCreate: (channelName: string, user: User, respond: SendResponseCallback) => ModuleResult;
-	afterChannelCreate: (channel: Channel, user: User, respond: SendResponseCallback) => ModuleResult;
+	afterChannelCreate: (channel: Channel, user: User, result: ChannelCreateFlags) => ModuleResult;
 	channelJoin: (channel: Channel, user: User, respond: SendResponseCallback) => ModuleResult;
 	channelMessage: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => ModuleResult;
 	channelNotice: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => ModuleResult;

@@ -363,7 +363,7 @@ export class Channel implements ModeHolder {
 	broadcastMessage<T extends Message<T>>(
 		type: MessageConstructor<T>,
 		params: MessageParamValues<T>,
-		prefix: MessagePrefix,
+		prefix: MessagePrefix = this._server.serverPrefix,
 		properties?: SendableMessageProperties,
 		exceptUser?: User | undefined
 	): void {

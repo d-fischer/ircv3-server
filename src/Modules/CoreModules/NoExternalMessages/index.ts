@@ -2,6 +2,7 @@ import type { SendResponseCallback } from '../../../SendResponseCallback';
 import { Module, ModuleResult } from '../../Module';
 import type { Channel } from '../../../Channel';
 import type { User } from '../../../User';
+import type { ChannelCreateFlags } from '../../ModuleHook';
 import { NoExternalMessagesModeHandler } from './NoExternalMessagesModeHandler';
 import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 import { MessageTypes } from 'ircv3';
@@ -29,8 +30,8 @@ export class NoExternalMessagesModule extends Module {
 		return ModuleResult.NEXT;
 	};
 
-	onChannelCreate = (channel: Channel): ModuleResult => {
-		channel.addMode(this._noExternalMessagesMode);
+	onChannelCreate = (channel: Channel, user: User, result: ChannelCreateFlags): ModuleResult => {
+		result.modesToSet.push({ mode: this._noExternalMessagesMode });
 
 		return ModuleResult.NEXT;
 	};

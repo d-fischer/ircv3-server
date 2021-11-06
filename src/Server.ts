@@ -38,7 +38,7 @@ import { UserRegistrationHandler } from './Commands/CoreCommands/UserRegistratio
 import type { ModeHandler, ModeType } from './Modes/ModeHandler';
 import type { Module } from './Modules/Module';
 import { ModuleResult } from './Modules/Module';
-import type { ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
+import type { ChannelCreateFlags, ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
 import type { OperLogin } from './OperLogin';
 import type { SendResponseCallback } from './SendResponseCallback';
 import { joinChunks } from './Toolkit/StringTools';
@@ -431,8 +431,6 @@ export class Server {
 			return;
 		}
 
-		this.callHook('afterChannelCreate', channel, user, respond);
-
 		if (channel.users.has(user)) {
 			return;
 		}
@@ -459,8 +457,28 @@ export class Server {
 		);
 
 		channel.sendTopic(user, respond, false);
-
 		channel.sendNames(user, respond);
+
+		if (isFirst) {
+			const channelCreateFlags: ChannelCreateFlags = {
+				modesToSet: []
+			};
+			this.callHook('afterChannelCreate', channel, user, channelCreateFlags);
+
+			if (channelCreateFlags.modesToSet.length) {
+				let letters = '';
+				const params: string[] = [];
+				for (const mode of channelCreateFlags.modesToSet) {
+					channel.addMode(mode.mode, mode.param);
+					letters += mode.mode.letter;
+				}
+
+				respond(MessageTypes.Commands.Mode, {
+					target: channel.name,
+					modes: [`+${letters}`, ...params].join(' ')
+				});
+			}
+		}
 	}
 
 	partChannel(user: User, channel: string | Channel, respond: SendResponseCallback, reason?: string): void {
