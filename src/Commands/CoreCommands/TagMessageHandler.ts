@@ -46,7 +46,7 @@ export class TagMessageHandler extends CommandHandler<MessageTypes.Commands.TagM
 		} else {
 			const otherUser = server.getUserByNick(cmd.params.target);
 
-			if (otherUser) {
+			if (otherUser?.isRegistered) {
 				const clientTags = server.getRedirectableClientTags(cmd);
 				otherUser.sendMessage(
 					MessageTypes.Commands.TagMessage,

@@ -47,7 +47,7 @@ export class InviteCommandHandler extends CommandHandler<MessageTypes.Commands.C
 		}
 
 		const target = server.getUserByNick(targetNick);
-		if (!target) {
+		if (!target?.isRegistered) {
 			respond(MessageTypes.Numerics.Error401NoSuchNick, {
 				nick: targetNick,
 				suffix: 'No such nick'

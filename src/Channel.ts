@@ -98,10 +98,19 @@ export class Channel implements ModeHolder {
 				if (isPrefix) {
 					const userNick = mode.param!;
 					const user = this._server.getUserByNick(userNick);
-					if (!user) {
+					if (!user?.isRegistered) {
 						respond(MessageTypes.Numerics.Error401NoSuchNick, {
 							nick: userNick,
 							suffix: 'No such nick'
+						});
+						continue;
+					}
+
+					if (!this.containsUser(user)) {
+						respond(MessageTypes.Numerics.Error441UserNotInChannel, {
+							nick: user.nick!,
+							channel: this.name,
+							suffix: "They aren't on that channel"
 						});
 						continue;
 					}
@@ -147,10 +156,19 @@ export class Channel implements ModeHolder {
 				if (isPrefix) {
 					const userNick = mode.param!;
 					const user = this._server.getUserByNick(userNick);
-					if (!user) {
+					if (!user?.isRegistered) {
 						respond(MessageTypes.Numerics.Error401NoSuchNick, {
 							nick: userNick,
 							suffix: 'No such nick'
+						});
+						continue;
+					}
+
+					if (!this.containsUser(user)) {
+						respond(MessageTypes.Numerics.Error441UserNotInChannel, {
+							nick: user.nick!,
+							channel: this.name,
+							suffix: "They aren't on that channel"
 						});
 						continue;
 					}

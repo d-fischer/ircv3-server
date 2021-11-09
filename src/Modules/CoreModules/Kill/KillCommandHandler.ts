@@ -19,7 +19,7 @@ export class KillCommandHandler extends CommandHandler<MessageTypes.Commands.Kil
 
 		const userToKill = server.getUserByNick(cmd.params.target);
 
-		if (!userToKill) {
+		if (!userToKill?.isRegistered) {
 			respond(MessageTypes.Numerics.Error401NoSuchNick, {
 				nick: cmd.params.target,
 				suffix: 'No such nick'

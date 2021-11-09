@@ -55,7 +55,7 @@ export class ChannelKickHandler extends CommandHandler<MessageTypes.Commands.Cha
 			respond(MessageTypes.Numerics.Error441UserNotInChannel, {
 				nick: victim.nick!,
 				channel: channel.name,
-				suffix: "They are'nt on that channel"
+				suffix: "They aren't on that channel"
 			});
 			return;
 		}

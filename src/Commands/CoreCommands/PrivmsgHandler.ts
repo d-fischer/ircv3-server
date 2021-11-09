@@ -46,7 +46,7 @@ export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.Private
 		} else {
 			const otherUser = server.getUserByNick(cmd.params.target);
 
-			if (otherUser) {
+			if (otherUser?.isRegistered) {
 				const clientTags = server.getRedirectableClientTags(cmd);
 				const nick = otherUser.nick!;
 				otherUser.sendMessage(

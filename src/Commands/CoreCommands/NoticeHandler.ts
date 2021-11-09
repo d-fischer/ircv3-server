@@ -42,7 +42,7 @@ export class NoticeHandler extends CommandHandler<MessageTypes.Commands.Notice> 
 		} else {
 			const otherUser = server.getUserByNick(cmd.params.target);
 
-			if (otherUser) {
+			if (otherUser?.isRegistered) {
 				const clientTags = server.getRedirectableClientTags(cmd);
 				otherUser.sendMessage(
 					MessageTypes.Commands.Notice,
