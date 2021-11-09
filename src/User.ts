@@ -211,9 +211,17 @@ export class User extends EventEmitter implements ModeHolder {
 		return this._nick;
 	}
 
+	get userName(): string | undefined {
+		return this._userName;
+	}
+
 	get publicHostName(): string {
 		// TODO cloaking?
 		return this._hostName;
+	}
+
+	get publicHostNameAsParam(): string {
+		return this.publicHostName.replace(/^:/, '0:');
 	}
 
 	get realName(): string | undefined {

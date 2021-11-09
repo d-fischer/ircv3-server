@@ -35,6 +35,7 @@ import { PrivmsgHandler } from './Commands/CoreCommands/PrivmsgHandler';
 import { TagMessageHandler } from './Commands/CoreCommands/TagMessageHandler';
 import { TopicHandler } from './Commands/CoreCommands/TopicHandler';
 import { UserRegistrationHandler } from './Commands/CoreCommands/UserRegistrationHandler';
+import { WhoisHandler } from './Commands/CoreCommands/WhoisHandler';
 import type { ModeHandler, ModeType } from './Modes/ModeHandler';
 import type { Module } from './Modules/Module';
 import { ModuleResult } from './Modules/Module';
@@ -173,6 +174,7 @@ export class Server {
 		this.addCommand(new TopicHandler());
 		this.addCommand(new ChannelKickHandler());
 		this.addCommand(new AwayHandler());
+		this.addCommand(new WhoisHandler());
 	}
 
 	addOperLogin(login: OperLogin): void {
@@ -274,7 +276,7 @@ export class Server {
 					}
 				} catch (e) {
 					if (e instanceof NotEnoughParametersError) {
-						if (e.command === 'NICK') {
+						if (e.command === 'NICK' || e.command === 'WHOIS') {
 							respond(MessageTypes.Numerics.Error431NoNickNameGiven, {
 								suffix: 'No nick name given'
 							});
