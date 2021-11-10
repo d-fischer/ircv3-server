@@ -1,5 +1,5 @@
 import type { SendResponseCallback } from '../../../SendResponseCallback';
-import { Module, ModuleResult } from '../../Module';
+import { Module, HookResult } from '../../Module';
 import type { Channel } from '../../../Channel';
 import type { User } from '../../../User';
 import type { ChannelCreateFlags } from '../../ModuleHook';
@@ -18,21 +18,21 @@ export class NoExternalMessagesModule extends Module {
 		components.addHook('afterChannelCreate', this.onChannelCreate);
 	}
 
-	handle = (channel: Channel, user: User, respond: SendResponseCallback): ModuleResult => {
+	handle = (channel: Channel, user: User, respond: SendResponseCallback): HookResult => {
 		if (channel.hasModeSet(this._noExternalMessagesMode) && !channel.containsUser(user)) {
 			respond(MessageTypes.Numerics.Error404CanNotSendToChan, {
 				channel: channel.name,
 				suffix: 'Cannot send to channel'
 			});
-			return ModuleResult.DENY;
+			return HookResult.DENY;
 		}
 
-		return ModuleResult.NEXT;
+		return HookResult.NEXT;
 	};
 
-	onChannelCreate = (channel: Channel, user: User, result: ChannelCreateFlags): ModuleResult => {
+	onChannelCreate = (channel: Channel, user: User, result: ChannelCreateFlags): HookResult => {
 		result.modesToSet.push({ mode: this._noExternalMessagesMode });
 
-		return ModuleResult.NEXT;
+		return HookResult.NEXT;
 	};
 }

@@ -4,7 +4,7 @@ import type { ModeHolder } from '../Modes/ModeHolder';
 import type { SendResponseCallback } from '../SendResponseCallback';
 import type { ModeState } from '../Toolkit/ModeTools';
 import type { User } from '../User';
-import type { Module, ModuleResult } from './Module';
+import type { Module, HookResult } from './Module';
 
 export interface ChannelVisibilityResult {
 	secret: boolean;
@@ -15,17 +15,17 @@ export interface ChannelCreateFlags {
 }
 
 export interface ModuleHookTypes {
-	channelCreate: (channelName: string, user: User, respond: SendResponseCallback) => ModuleResult;
-	afterChannelCreate: (channel: Channel, user: User, result: ChannelCreateFlags) => ModuleResult;
-	channelJoin: (channel: Channel, user: User, respond: SendResponseCallback) => ModuleResult;
-	channelMessage: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => ModuleResult;
-	channelNotice: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => ModuleResult;
-	channelTagMessage: (channel: Channel, user: User, respond: SendResponseCallback) => ModuleResult;
-	modeChange: (target: ModeHolder, user: User, changes: SingleMode[], respond: SendResponseCallback) => ModuleResult;
-	preTopicChange: (channel: Channel, user: User, topic: string, respond: SendResponseCallback) => ModuleResult;
-	userCreate: (user: User) => ModuleResult;
-	userDestroy: (user: User) => ModuleResult;
-	channelCheckVisibility: (channel: Channel, user: User, result: ChannelVisibilityResult) => ModuleResult;
+	channelCreate: (channelName: string, user: User, respond: SendResponseCallback) => HookResult;
+	afterChannelCreate: (channel: Channel, user: User, result: ChannelCreateFlags) => HookResult;
+	channelJoin: (channel: Channel, user: User, respond: SendResponseCallback) => HookResult;
+	channelMessage: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => HookResult;
+	channelNotice: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => HookResult;
+	channelTagMessage: (channel: Channel, user: User, respond: SendResponseCallback) => HookResult;
+	modeChange: (target: ModeHolder, user: User, changes: SingleMode[], respond: SendResponseCallback) => HookResult;
+	preTopicChange: (channel: Channel, user: User, topic: string, respond: SendResponseCallback) => HookResult;
+	userCreate: (user: User) => HookResult;
+	userDestroy: (user: User) => HookResult;
+	channelCheckVisibility: (channel: Channel, user: User, result: ChannelVisibilityResult) => HookResult;
 }
 
 export class ModuleHook<HookType extends keyof ModuleHookTypes> {
@@ -35,8 +35,8 @@ export class ModuleHook<HookType extends keyof ModuleHookTypes> {
 		private readonly _callback: ModuleHookTypes[HookType]
 	) {}
 
-	call(...args: Parameters<ModuleHookTypes[HookType]>): ModuleResult {
-		return (this._callback as (...someArgs: Parameters<ModuleHookTypes[HookType]>) => ModuleResult).call(
+	call(...args: Parameters<ModuleHookTypes[HookType]>): HookResult {
+		return (this._callback as (...someArgs: Parameters<ModuleHookTypes[HookType]>) => HookResult).call(
 			this.module,
 			...args
 		);

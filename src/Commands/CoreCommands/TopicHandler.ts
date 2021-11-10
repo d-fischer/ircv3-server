@@ -3,7 +3,7 @@ import type { SendResponseCallback } from '../../SendResponseCallback';
 import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
-import { ModuleResult } from '../../Modules/Module';
+import { HookResult } from '../../Modules/Module';
 
 export class TopicHandler extends CommandHandler<MessageTypes.Commands.Topic> {
 	constructor() {
@@ -19,7 +19,7 @@ export class TopicHandler extends CommandHandler<MessageTypes.Commands.Topic> {
 			if (channel) {
 				if (newTopic) {
 					const result = server.callHook('preTopicChange', channel, user, newTopic, respond);
-					if (result !== ModuleResult.DENY) {
+					if (result !== HookResult.DENY) {
 						channel.changeTopic(newTopic.slice(0, server.topicLength), user, respond);
 					}
 				} else {

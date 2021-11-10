@@ -1,5 +1,5 @@
 import { isChannel, MessageTypes } from 'ircv3';
-import { ModuleResult } from '../../Modules/Module';
+import { HookResult } from '../../Modules/Module';
 import type { SendResponseCallback } from '../../SendResponseCallback';
 import type { Server } from '../../Server';
 import type { User } from '../../User';
@@ -22,7 +22,7 @@ export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.Private
 
 			if (channel) {
 				const result = server.callHook('channelMessage', channel, user, cmd.params.content, respond);
-				if (result !== ModuleResult.DENY) {
+				if (result !== HookResult.DENY) {
 					const clientTags = server.getRedirectableClientTags(cmd);
 					channel.broadcastMessage(
 						MessageTypes.Commands.PrivateMessage,

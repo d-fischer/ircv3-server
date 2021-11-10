@@ -1,6 +1,6 @@
 import { MessageTypes } from 'ircv3';
 import type { SendResponseCallback } from '../../../SendResponseCallback';
-import { Module, ModuleResult } from '../../Module';
+import { Module, HookResult } from '../../Module';
 import { InviteOnlyModeHandler } from './InviteOnlyModeHandler';
 import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 import { InviteCommandHandler } from './InviteCommandHandler';
@@ -31,7 +31,7 @@ export class InviteModule extends Module {
 		invitesForThisUser.add(invite);
 	}
 
-	onChannelJoin = (channel: Channel, user: User, respond: SendResponseCallback): ModuleResult => {
+	onChannelJoin = (channel: Channel, user: User, respond: SendResponseCallback): HookResult => {
 		if (channel.hasModeSet(this._inviteOnlyMode)) {
 			const invitesForUser = this._invitesByUser.get(user);
 
@@ -39,7 +39,7 @@ export class InviteModule extends Module {
 				for (const invite of invitesForUser) {
 					if (invite.channel === channel) {
 						invitesForUser.delete(invite);
-						return ModuleResult.NEXT;
+						return HookResult.NEXT;
 					}
 				}
 			}
@@ -48,17 +48,17 @@ export class InviteModule extends Module {
 				channel: channel.name,
 				suffix: 'Cannot join channel (+i)'
 			});
-			return ModuleResult.DENY;
+			return HookResult.DENY;
 		}
 
-		return ModuleResult.NEXT;
+		return HookResult.NEXT;
 	};
 
-	onUserDestroy = (user: User): ModuleResult => {
+	onUserDestroy = (user: User): HookResult => {
 		if (this._invitesByUser.has(user)) {
 			this._invitesByUser.delete(user);
 		}
 
-		return ModuleResult.NEXT;
+		return HookResult.NEXT;
 	};
 }

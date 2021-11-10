@@ -39,7 +39,7 @@ import { WhoHandler } from './Commands/CoreCommands/WhoHandler';
 import { WhoisHandler } from './Commands/CoreCommands/WhoisHandler';
 import type { ModeHandler, ModeType } from './Modes/ModeHandler';
 import type { Module } from './Modules/Module';
-import { ModuleResult } from './Modules/Module';
+import { HookResult } from './Modules/Module';
 import type { ChannelCreateFlags, ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
 import type { OperLogin } from './OperLogin';
 import type { SendResponseCallback } from './SendResponseCallback';
@@ -422,7 +422,7 @@ export class Server {
 			if (!channelObject) {
 				isFirst = true;
 				const res = this.callHook('channelCreate', channel, user, respond);
-				if (res === ModuleResult.DENY) {
+				if (res === HookResult.DENY) {
 					return;
 				}
 				channelObject = new Channel(channel, user, this);
@@ -432,7 +432,7 @@ export class Server {
 		}
 
 		const res = this.callHook('channelJoin', channel, user, respond);
-		if (res === ModuleResult.DENY) {
+		if (res === HookResult.DENY) {
 			if (isFirst) {
 				this._channels.delete(this._caseFoldString(channel.name));
 			}
@@ -706,14 +706,14 @@ export class Server {
 	callHook<HookType extends keyof ModuleHookTypes>(
 		name: HookType,
 		...args: Parameters<ModuleHookTypes[HookType]>
-	): ModuleResult {
+	): HookResult {
 		const hooks = this._hooksByType.get(name)!;
-		let result = ModuleResult.NEXT;
+		let result = HookResult.NEXT;
 
 		for (const hook of hooks) {
 			result = (hook as ModuleHook<HookType>).call(...args);
 
-			if (result !== ModuleResult.NEXT) {
+			if (result !== HookResult.NEXT) {
 				break;
 			}
 		}

@@ -1,6 +1,6 @@
 import type { Channel } from '../../../Channel';
 import type { User } from '../../../User';
-import { Module, ModuleResult } from '../../Module';
+import { Module, HookResult } from '../../Module';
 import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 import type { ChannelVisibilityResult } from '../../ModuleHook';
 import { SecretModeHandler } from './SecretModeHandler';
@@ -15,8 +15,8 @@ export class SecretModule extends Module {
 		);
 	}
 
-	checkChannelVisibility = (channel: Channel, user: User, result: ChannelVisibilityResult): ModuleResult => {
+	checkChannelVisibility = (channel: Channel, user: User, result: ChannelVisibilityResult): HookResult => {
 		result.secret ||= channel.hasModeSet(this._secretMode);
-		return ModuleResult.NEXT;
+		return HookResult.NEXT;
 	};
 }

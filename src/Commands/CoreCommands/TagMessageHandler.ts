@@ -3,7 +3,7 @@ import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 import { isChannel, MessageTypes } from 'ircv3';
-import { ModuleResult } from '../../Modules/Module';
+import { HookResult } from '../../Modules/Module';
 
 export class TagMessageHandler extends CommandHandler<MessageTypes.Commands.TagMessage> {
 	constructor() {
@@ -23,7 +23,7 @@ export class TagMessageHandler extends CommandHandler<MessageTypes.Commands.TagM
 
 			if (channel) {
 				const result = server.callHook('channelTagMessage', channel, user, respond);
-				if (result !== ModuleResult.DENY) {
+				if (result !== HookResult.DENY) {
 					const clientTags = server.getRedirectableClientTags(cmd);
 					channel.broadcastMessage(
 						MessageTypes.Commands.TagMessage,

@@ -3,7 +3,7 @@ import { CommandHandler } from '../CommandHandler';
 import type { User } from '../../User';
 import type { Server } from '../../Server';
 import { isChannel, MessageTypes } from 'ircv3';
-import { ModuleResult } from '../../Modules/Module';
+import { HookResult } from '../../Modules/Module';
 
 export class NoticeHandler extends CommandHandler<MessageTypes.Commands.Notice> {
 	constructor() {
@@ -18,7 +18,7 @@ export class NoticeHandler extends CommandHandler<MessageTypes.Commands.Notice> 
 
 			if (channel) {
 				const result = server.callHook('channelNotice', channel, user, cmd.params.content, respond);
-				if (result !== ModuleResult.DENY) {
+				if (result !== HookResult.DENY) {
 					const clientTags = server.getRedirectableClientTags(cmd);
 					channel.broadcastMessage(
 						MessageTypes.Commands.Notice,

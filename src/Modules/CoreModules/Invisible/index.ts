@@ -1,4 +1,4 @@
-import { Module, ModuleResult } from '../../Module';
+import { Module, HookResult } from '../../Module';
 import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 import { InvisibleModeHandler } from './InvisibleModeHandler';
 import type { User } from '../../../User';
@@ -11,9 +11,9 @@ export class InvisibleModule extends Module {
 		components.addHook('userCreate', this.onUserCreate);
 	}
 
-	onUserCreate = (user: User): ModuleResult => {
+	onUserCreate = (user: User): HookResult => {
 		user.addMode(this._invisibleMode);
 
-		return ModuleResult.NEXT;
+		return HookResult.NEXT;
 	};
 }

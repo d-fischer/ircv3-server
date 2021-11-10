@@ -1,7 +1,7 @@
 import type { Server } from '../Server';
 import { ModuleComponentHolder } from './ModuleComponentHolder';
 
-export enum ModuleResult {
+export enum HookResult {
 	ALLOW,
 	DENY,
 	NEXT
