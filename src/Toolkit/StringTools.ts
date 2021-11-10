@@ -1,3 +1,5 @@
+import escapeStringRegexp from '@d-fischer/escape-string-regexp';
+
 export function sortStringByOrder(str: string, order: string): string {
 	const orderForChar = Object.assign(
 		{},
@@ -30,4 +32,11 @@ export function joinChunks(tokens: string[], limit: number): string[] {
 	}
 
 	return lines;
+}
+
+export function matchesWildcard(str: string, wildcard: string): boolean {
+	if (!wildcard.includes('*')) {
+		return str === wildcard;
+	}
+	return new RegExp(`^${wildcard.split('*').map(escapeStringRegexp).join('.*')}`).test(str);
 }

@@ -138,6 +138,10 @@ export class User extends EventEmitter implements ModeHolder {
 		return this._awayMessage != null;
 	}
 
+	isOper(forForeignServer = false): boolean {
+		return this.hasMode('globalOper') || (!forForeignServer && this.hasMode('localOper'));
+	}
+
 	setAwayMessage(msg: string | null): void {
 		this._awayMessage = msg;
 		this._server.forEachCommonChannelUser(this, commonUser => {
@@ -352,6 +356,11 @@ export class User extends EventEmitter implements ModeHolder {
 
 	get channels(): Set<Channel> {
 		return new Set<Channel>(this._channels);
+	}
+
+	isVisibleFor(otherUser: User): boolean {
+		const otherUserChannels = otherUser.channels;
+		return !this.hasMode('invisible') || [...this._channels].some(channel => otherUserChannels.has(channel));
 	}
 
 	destroy(): boolean {

@@ -10,7 +10,7 @@ export class KillCommandHandler extends CommandHandler<MessageTypes.Commands.Kil
 	}
 
 	handleCommand(cmd: MessageTypes.Commands.Kill, user: User, server: Server, respond: SendResponseCallback): void {
-		if (!user.hasMode('globalOper') && !user.hasMode('localOper')) {
+		if (!user.isOper()) {
 			respond(MessageTypes.Numerics.Error481NoPrivileges, {
 				suffix: "Permission denied - You're not an IRC operator"
 			});

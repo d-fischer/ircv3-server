@@ -35,6 +35,7 @@ import { PrivmsgHandler } from './Commands/CoreCommands/PrivmsgHandler';
 import { TagMessageHandler } from './Commands/CoreCommands/TagMessageHandler';
 import { TopicHandler } from './Commands/CoreCommands/TopicHandler';
 import { UserRegistrationHandler } from './Commands/CoreCommands/UserRegistrationHandler';
+import { WhoHandler } from './Commands/CoreCommands/WhoHandler';
 import { WhoisHandler } from './Commands/CoreCommands/WhoisHandler';
 import type { ModeHandler, ModeType } from './Modes/ModeHandler';
 import type { Module } from './Modules/Module';
@@ -42,7 +43,7 @@ import { ModuleResult } from './Modules/Module';
 import type { ChannelCreateFlags, ModuleHook, ModuleHookTypes } from './Modules/ModuleHook';
 import type { OperLogin } from './OperLogin';
 import type { SendResponseCallback } from './SendResponseCallback';
-import { joinChunks } from './Toolkit/StringTools';
+import { joinChunks, matchesWildcard } from './Toolkit/StringTools';
 import { assertNever } from './Toolkit/TypeTools';
 import { User } from './User';
 
@@ -76,7 +77,7 @@ export class Server {
 	private readonly _topicLength: number;
 	private readonly _userLength: number;
 
-	private readonly _users: User[] = [];
+	private readonly _users = new Set<User>();
 	private readonly _nickUserMap = new Map<string, User>();
 	private readonly _channels = new Map<string, Channel>();
 	private readonly _knownCommands = MessageTypes.all;
@@ -174,6 +175,7 @@ export class Server {
 		this.addCommand(new TopicHandler());
 		this.addCommand(new ChannelKickHandler());
 		this.addCommand(new AwayHandler());
+		this.addCommand(new WhoHandler());
 		this.addCommand(new WhoisHandler());
 	}
 
@@ -183,6 +185,10 @@ export class Server {
 
 	loginAsOper(userName: string, password: string): OperLogin | null {
 		return this._operLogins.find(l => l.userName === userName && l.password === password) ?? null;
+	}
+
+	get users(): Set<User> {
+		return new Set(this._users);
 	}
 
 	get channels(): Map<string, Channel> {
@@ -357,7 +363,7 @@ export class Server {
 				this._nickUserMap.set(newNickCaseFolded, user);
 			}
 		});
-		this._users.push(user);
+		this._users.add(user);
 		await user.resolveUserIp();
 	}
 
@@ -537,12 +543,16 @@ export class Server {
 		return !this.nickExists(newNick);
 	}
 
-	getUserByNick(nick: string): User | undefined {
-		return this._nickUserMap.get(this._caseFoldString(nick));
+	getUserByNick(nick: string): User | null {
+		return this._nickUserMap.get(this._caseFoldString(nick)) ?? null;
 	}
 
-	getChannelByName(name: string): Channel | undefined {
-		return this._channels.get(this._caseFoldString(name));
+	nickMatchesWildcard(nick: string, wildcard: string): boolean {
+		return matchesWildcard(this._caseFoldString(nick), this._caseFoldString(wildcard));
+	}
+
+	getChannelByName(name: string): Channel | null {
+		return this._channels.get(this._caseFoldString(name)) ?? null;
 	}
 
 	killUser(user: User, reason?: string, sender?: string): void {
@@ -574,13 +584,8 @@ export class Server {
 				this._nickUserMap.delete(this._caseFoldString(user.nick));
 			}
 		}
-		const index = this._users.findIndex(u => u === user);
-		if (index === -1) {
-			console.error(`Could not find index of user ${user.connectionIdentifier}`);
-		} else {
-			this._users.splice(index, 1);
-		}
-		console.log(`${user.connectionIdentifier} disconnected. ${this._users.length} remaining.`);
+		this._users.delete(user);
+		console.log(`${user.connectionIdentifier} disconnected. ${this._users.size} remaining.`);
 	}
 
 	unlinkUserFromChannel(user: User, channel: Channel): void {

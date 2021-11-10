@@ -352,6 +352,20 @@ export class Channel implements ModeHolder {
 		return this._server.getPrefixDefinitionByModeChar(userAccess[0]);
 	}
 
+	getFilteredPrefixesForUser(user: User, modeLetters: string): string {
+		return modeLetters
+			.split('')
+			.map(letter => {
+				if (!this._userAccess.get(user)?.includes(letter)) {
+					return '';
+				}
+
+				const def = this._server.getPrefixDefinitionByModeChar(letter);
+				return def?.prefix ?? '';
+			})
+			.join('');
+	}
+
 	isUserAtLeast(
 		user: User,
 		accessLevelName: string,
