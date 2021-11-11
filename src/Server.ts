@@ -325,7 +325,16 @@ export class Server {
 				serverName: this._serverAddress,
 				version: this._version,
 				userModes: this.supportedUserModes,
-				channelModes: Object.values(channelModes).join('').split('').sort().join('')
+				channelModes: Object.values(channelModes).join('').split('').sort().join(''),
+				channelModesWithParam: (
+					channelModes.alwaysWithParam +
+					channelModes.prefix +
+					channelModes.paramWhenSet +
+					channelModes.list
+				)
+					.split('')
+					.sort()
+					.join('')
 			});
 			const reversedPrefixes = [...this._prefixes].reverse();
 			const prefixString = `(${reversedPrefixes.map(pref => pref.modeChar).join('')})${reversedPrefixes
