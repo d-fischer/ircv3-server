@@ -87,11 +87,13 @@ export class Channel implements ModeHolder {
 					});
 					continue;
 				}
-			} else if (!modeDescriptor.canSetOn(this, source, this._server, adding, mode.param)) {
+			} else if (!modeDescriptor.checkAccess(this, source, this._server, adding, mode.param)) {
 				respond(MessageTypes.Numerics.Error482ChanOpPrivsNeeded, {
 					channel: this._name,
 					suffix: 'You need channel privileges to do this'
 				});
+				continue;
+			} else if (!modeDescriptor.checkValidity(this, source, this._server, adding, mode.param)) {
 				continue;
 			}
 			if (adding) {
@@ -270,6 +272,10 @@ export class Channel implements ModeHolder {
 			{},
 			source
 		);
+	}
+
+	getModeData(mode: ModeHandler): ModeState | null {
+		return this._modes.find(m => m.mode === mode) ?? null;
 	}
 
 	sendNames(user: User, respond: SendResponseCallback): void {

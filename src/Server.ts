@@ -196,13 +196,39 @@ export class Server {
 	}
 
 	get supportedChannelModes(): SupportedModesByType {
+		const modes = Array.from(this._registeredModes).filter(mode => mode.type === 'channel');
+
+		const listModes: string[] = [];
+		const alwaysWithParamModes = [];
+		const paramWhenSetModes = [];
+		const noParamModes = [];
+
+		for (const mode of modes) {
+			switch (mode.paramSpec) {
+				case 'always': {
+					alwaysWithParamModes.push(mode.letter);
+					break;
+				}
+				case 'setOnly': {
+					paramWhenSetModes.push(mode.letter);
+					break;
+				}
+				case 'never': {
+					noParamModes.push(mode.letter);
+					break;
+				}
+				default: {
+					assertNever(mode.paramSpec);
+				}
+			}
+		}
+
 		return {
 			prefix: this._prefixes.reduceRight((result, prefix) => result + prefix.modeChar, ''),
-			list: '',
-			alwaysWithParam: '',
-			paramWhenSet: '',
+			list: listModes.sort().join(''),
+			alwaysWithParam: alwaysWithParamModes.sort().join(''),
+			paramWhenSet: paramWhenSetModes.sort().join(''),
 			noParam: Array.from(this._registeredModes)
-				.filter(mode => mode.type === 'channel')
 				.map(mode => mode.letter)
 				.sort()
 				.join('')

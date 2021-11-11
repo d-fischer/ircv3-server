@@ -14,7 +14,7 @@ export abstract class SimpleChannelModeHandler extends SimpleModeHandler {
 		return channel.isUserAtLeast(user, this._minAccess);
 	}
 
-	canSetOn(channel: Channel, user: User): boolean {
+	checkAccess(channel: Channel, user: User): boolean {
 		return this.hasRequiredLevel(user, channel);
 	}
 }

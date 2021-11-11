@@ -8,7 +8,7 @@ export class GlobalOperModeHandler extends SimpleModeHandler {
 		super('globalOper', 'o', 'user');
 	}
 
-	canSetOn(channel: Channel, user: User, server: Server, adding: boolean): boolean {
+	checkAccess(channel: Channel, user: User, server: Server, adding: boolean): boolean {
 		return !adding;
 	}
 }

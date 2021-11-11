@@ -7,7 +7,7 @@ export abstract class SimpleUserModeHandler extends SimpleModeHandler {
 		super(name, letter, 'user');
 	}
 
-	canSetOn(target: ModeHolder, user: User): boolean {
+	checkAccess(target: ModeHolder, user: User): boolean {
 		return user === target;
 	}
 }

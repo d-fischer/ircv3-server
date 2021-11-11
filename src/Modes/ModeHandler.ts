@@ -22,6 +22,10 @@ export abstract class ModeHandler {
 		return this._letter;
 	}
 
+	get paramSpec(): ModeParamSpec {
+		return this._params;
+	}
+
 	get type(): ModeType {
 		return this._type;
 	}
@@ -46,5 +50,10 @@ export abstract class ModeHandler {
 		}
 	}
 
-	abstract canSetOn(target: ModeHolder, user: User, server: Server, adding: boolean, param?: string): boolean;
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	checkValidity(target: ModeHolder, user: User, server: Server, adding: boolean, param?: string): boolean {
+		return true;
+	}
+
+	abstract checkAccess(target: ModeHolder, user: User, server: Server, adding: boolean, param?: string): boolean;
 }

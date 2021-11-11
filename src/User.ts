@@ -270,7 +270,7 @@ export class User extends EventEmitter implements ModeHolder {
 		for (const mode of changes) {
 			const modeDescriptor = this._server.findModeByLetter(mode.letter, 'user')!;
 			const adding = mode.action === 'add';
-			if (!modeDescriptor.canSetOn(this, this, this._server, adding, mode.param)) {
+			if (!modeDescriptor.checkAccess(this, this, this._server, adding, mode.param)) {
 				// the mode itself should handle the individual error here
 				continue;
 			}
