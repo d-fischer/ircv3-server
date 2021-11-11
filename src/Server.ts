@@ -51,7 +51,7 @@ export type CaseMapping = 'ascii' | 'rfc1459' | 'rfc1459-strict';
 
 export interface ServerConfiguration {
 	serverAddress: string;
-	serverName?: string;
+	networkName?: string;
 	version?: string;
 	caseMapping?: CaseMapping;
 	channelLimit?: number;
@@ -68,7 +68,7 @@ export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
 
 export class Server {
 	private readonly _serverAddress: string;
-	private readonly _serverName: string;
+	private readonly _networkName: string;
 	private readonly _version: string;
 	private readonly _caseMapping: CaseMapping;
 	private readonly _channelLimit: number;
@@ -144,7 +144,7 @@ export class Server {
 
 	constructor(config: ServerConfiguration) {
 		this._serverAddress = config.serverAddress;
-		this._serverName = config.serverName ?? config.serverAddress;
+		this._networkName = config.networkName ?? config.serverAddress;
 		this._version = config.version ?? 'node-ircv3-server-0.0.1';
 		this._caseMapping = config.caseMapping ?? 'ascii';
 		this._channelLimit = config.channelLimit ?? 50;
@@ -346,7 +346,7 @@ export class Server {
 				['CHANLIMIT', `#:${this._channelLimit}`],
 				['CHANNELLEN', this._channelLength.toString()],
 				['NICKLEN', this._nickLength.toString()],
-				['NETWORK', this._serverName],
+				['NETWORK', this._networkName],
 				['CHANMODES', chanModesString],
 				['PREFIX', prefixString],
 				['CASEMAPPING', this._caseMapping],

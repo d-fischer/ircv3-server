@@ -12,7 +12,8 @@ import { UserHostModule } from './Modules/CoreModules/UserHost';
 import { Server } from './Server';
 
 const server = new Server({
-	serverAddress: 'test.server'
+	serverAddress: 'test.server',
+	networkName: 'LocalTestNet'
 });
 
 server.loadModule(InvisibleModule);
