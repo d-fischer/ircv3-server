@@ -31,7 +31,12 @@ export class InviteModule extends Module {
 		invitesForThisUser.add(invite);
 	}
 
-	onChannelJoin = (channel: Channel, user: User, respond: SendResponseCallback): HookResult => {
+	onChannelJoin = (
+		channel: Channel,
+		user: User,
+		cmd: MessageTypes.Commands.ChannelJoin,
+		respond: SendResponseCallback
+	): HookResult => {
 		if (channel.hasModeSet(this._inviteOnlyMode)) {
 			const invitesForUser = this._invitesByUser.get(user);
 

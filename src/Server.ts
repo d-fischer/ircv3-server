@@ -229,6 +229,14 @@ export class Server {
 		return this._userLength;
 	}
 
+	get channelLength(): number {
+		return this._channelLength;
+	}
+
+	get channelLimit(): number {
+		return this._channelLimit;
+	}
+
 	getPrefixDefinitionByModeChar(char: string): InternalAccessLevelDefinition | null {
 		return this._prefixes.find(def => def.modeChar === char) ?? null;
 	}
@@ -310,7 +318,7 @@ export class Server {
 			});
 		});
 		user.onRegister(() => {
-			this._nickUserMap.set(this._caseFoldString(user.nick!), user);
+			this._nickUserMap.set(this.caseFoldString(user.nick!), user);
 			user.sendNumeric(MessageTypes.Numerics.Reply001Welcome, {
 				welcomeText: 'the server welcomes you!'
 			});
@@ -361,12 +369,12 @@ export class Server {
 			this.sendMotd(user);
 		});
 		user.onNickChange(oldNick => {
-			const newNickCaseFolded = this._caseFoldString(user.nick!);
+			const newNickCaseFolded = this.caseFoldString(user.nick!);
 			if (!oldNick) {
 				this._nickUserMap.set(newNickCaseFolded, user);
 				return;
 			}
-			const oldNickCaseFolded = this._caseFoldString(oldNick);
+			const oldNickCaseFolded = this.caseFoldString(oldNick);
 			if (newNickCaseFolded !== oldNickCaseFolded) {
 				this._nickUserMap.delete(oldNickCaseFolded);
 				this._nickUserMap.set(newNickCaseFolded, user);
@@ -408,52 +416,13 @@ export class Server {
 		}
 	}
 
-	joinChannel(user: User, channel: string | Channel, respond: SendResponseCallback): void {
-		const channelName = typeof channel === 'string' ? channel : channel.name;
-		if (user.channels.size >= this._channelLimit) {
-			respond(MessageTypes.Numerics.Error405TooManyChannels, {
-				channel: channelName,
-				suffix: 'You have joined too many channels'
-			});
-			return;
-		}
-		if (channelName.length > this._channelLength) {
-			respond(MessageTypes.Numerics.Error479BadChanName, {
-				channel: channelName,
-				suffix: 'Illegal channel name'
-			});
-			return;
-		}
-		let isFirst = false;
-		if (typeof channel === 'string') {
-			const foldedName = this._caseFoldString(channel);
-			let channelObject = this._channels.get(foldedName);
-			if (!channelObject) {
-				isFirst = true;
-				const res = this.callHook('channelCreate', channel, user, respond);
-				if (res === HookResult.DENY) {
-					return;
-				}
-				channelObject = new Channel(channel, user, this);
-				this._channels.set(foldedName, channelObject);
-			}
-			channel = channelObject;
-		}
-
-		const res = this.callHook('channelJoin', channel, user, respond);
-		if (res === HookResult.DENY) {
-			if (isFirst) {
-				this._channels.delete(this._caseFoldString(channel.name));
-			}
-			return;
-		}
-
-		if (channel.users.has(user)) {
+	doJoinChannel(user: User, channel: Channel, creating: boolean, respond: SendResponseCallback): void {
+		if (channel.containsUser(user)) {
 			return;
 		}
 
 		user.addChannel(channel);
-		channel.addUser(user, isFirst);
+		channel.addUser(user, creating);
 
 		channel.broadcastMessage(
 			MessageTypes.Commands.ChannelJoin,
@@ -475,27 +444,41 @@ export class Server {
 
 		channel.sendTopic(user, respond, false);
 		channel.sendNames(user, respond);
+	}
 
-		if (isFirst) {
-			const channelCreateFlags: ChannelCreateFlags = {
-				modesToSet: []
-			};
-			this.callHook('afterChannelCreate', channel, user, channelCreateFlags);
-
-			if (channelCreateFlags.modesToSet.length) {
-				let letters = '';
-				const params: string[] = [];
-				for (const mode of channelCreateFlags.modesToSet) {
-					channel.addMode(mode.mode, mode.param);
-					letters += mode.mode.letter;
-				}
-
-				respond(MessageTypes.Commands.Mode, {
-					target: channel.name,
-					modes: [`+${letters}`, ...params].join(' ')
-				});
-			}
+	doCreateChannel(user: User, channelName: string, respond: SendResponseCallback): Channel {
+		// avoid creating a channel that already exists at ALL costs! even if it means checking existence more than once
+		const foldedChannelName = this.caseFoldString(channelName);
+		if (this._channels.has(foldedChannelName)) {
+			throw new Error('trying to force creating a channel that already exists');
 		}
+
+		const channel = new Channel(channelName, user, this);
+
+		this._channels.set(foldedChannelName, channel);
+
+		this.doJoinChannel(user, channel, true, respond);
+
+		const channelCreateFlags: ChannelCreateFlags = {
+			modesToSet: []
+		};
+		this.callHook('afterChannelCreate', channel, user, channelCreateFlags);
+
+		if (channelCreateFlags.modesToSet.length) {
+			let letters = '';
+			const params: string[] = [];
+			for (const mode of channelCreateFlags.modesToSet) {
+				channel.addMode(mode.mode, mode.param);
+				letters += mode.mode.letter;
+			}
+
+			respond(MessageTypes.Commands.Mode, {
+				target: channel.name,
+				modes: [`+${letters}`, ...params].join(' ')
+			});
+		}
+
+		return channel;
 	}
 
 	partChannel(user: User, channel: string | Channel, respond: SendResponseCallback, reason?: string): void {
@@ -542,26 +525,26 @@ export class Server {
 	}
 
 	nickExists(nick: string): boolean {
-		return this._nickUserMap.has(this._caseFoldString(nick));
+		return this._nickUserMap.has(this.caseFoldString(nick));
 	}
 
 	nickChangeAllowed(oldNick: string | undefined, newNick: string): boolean {
-		if (oldNick && this._caseFoldString(oldNick) === this._caseFoldString(newNick)) {
+		if (oldNick && this.caseFoldString(oldNick) === this.caseFoldString(newNick)) {
 			return true;
 		}
 		return !this.nickExists(newNick);
 	}
 
 	getUserByNick(nick: string): User | null {
-		return this._nickUserMap.get(this._caseFoldString(nick)) ?? null;
+		return this._nickUserMap.get(this.caseFoldString(nick)) ?? null;
 	}
 
 	nickMatchesWildcard(nick: string, wildcard: string): boolean {
-		return matchesWildcard(this._caseFoldString(nick), this._caseFoldString(wildcard));
+		return matchesWildcard(this.caseFoldString(nick), this.caseFoldString(wildcard));
 	}
 
 	getChannelByName(name: string): Channel | null {
-		return this._channels.get(this._caseFoldString(name)) ?? null;
+		return this._channels.get(this.caseFoldString(name)) ?? null;
 	}
 
 	killUser(user: User, reason?: string, sender?: string): void {
@@ -590,7 +573,7 @@ export class Server {
 				this.unlinkUserFromChannel(user, channel);
 			}
 			if (user.nick) {
-				this._nickUserMap.delete(this._caseFoldString(user.nick));
+				this._nickUserMap.delete(this.caseFoldString(user.nick));
 			}
 		}
 		this._users.delete(user);
@@ -615,7 +598,7 @@ export class Server {
 			this.unlinkUserFromChannel(user, channel);
 		}
 
-		this._channels.delete(this._caseFoldString(channel.name));
+		this._channels.delete(this.caseFoldString(channel.name));
 	}
 
 	createMessage<T extends Message>(
@@ -734,7 +717,7 @@ export class Server {
 		return new Map<string, string>(Array.from(cmd.tags.entries()).filter(([key]) => key.startsWith('+')));
 	}
 
-	private _caseFoldString(str: string) {
+	caseFoldString(str: string): string {
 		switch (this._caseMapping) {
 			case 'ascii': {
 				return str.replace(/[A-Z]/g, l => l.toLowerCase());

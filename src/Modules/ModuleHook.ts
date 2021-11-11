@@ -1,10 +1,10 @@
-import type { SingleMode } from 'ircv3';
+import type { MessageTypes, SingleMode } from 'ircv3';
 import type { Channel } from '../Channel';
 import type { ModeHolder } from '../Modes/ModeHolder';
 import type { SendResponseCallback } from '../SendResponseCallback';
 import type { ModeState } from '../Toolkit/ModeTools';
 import type { User } from '../User';
-import type { Module, HookResult } from './Module';
+import type { HookResult, Module } from './Module';
 
 export interface ChannelVisibilityResult {
 	secret: boolean;
@@ -17,7 +17,12 @@ export interface ChannelCreateFlags {
 export interface ModuleHookTypes {
 	channelCreate: (channelName: string, user: User, respond: SendResponseCallback) => HookResult;
 	afterChannelCreate: (channel: Channel, user: User, result: ChannelCreateFlags) => HookResult;
-	channelJoin: (channel: Channel, user: User, respond: SendResponseCallback) => HookResult;
+	channelJoin: (
+		channel: Channel,
+		user: User,
+		cmd: MessageTypes.Commands.ChannelJoin,
+		respond: SendResponseCallback
+	) => HookResult;
 	channelMessage: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => HookResult;
 	channelNotice: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => HookResult;
 	channelTagMessage: (channel: Channel, user: User, respond: SendResponseCallback) => HookResult;
