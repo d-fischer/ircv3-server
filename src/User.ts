@@ -503,8 +503,16 @@ export class User extends EventEmitter implements ModeHolder {
 			this._hostIpResolved !== null &&
 			!this._capabilitiesNegotiating
 		) {
-			this._registered = true;
-			this.emit(this.onRegister);
+			if (this._server.nickExists(this._nick)) {
+				this.sendMessage(MessageTypes.Numerics.Error433NickNameInUse, {
+					me: '*',
+					nick: this._nick,
+					suffix: 'Nick already in use'
+				});
+			} else {
+				this._registered = true;
+				this.emit(this.onRegister);
+			}
 		}
 	}
 
