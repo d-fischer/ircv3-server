@@ -272,6 +272,10 @@ export class Server {
 		return this._prefixes.findIndex(def => def.name === name);
 	}
 
+	get availablePrefixLetters(): string {
+		return this._prefixes.map(pref => pref.modeChar).join('');
+	}
+
 	listen(port: number, bindIp?: string): void {
 		this._netServer.listen(port, bindIp);
 	}

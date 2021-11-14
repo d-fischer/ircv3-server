@@ -320,7 +320,6 @@ export class User extends EventEmitter implements ModeHolder {
 		this._modes = resultingModes.sort(Channel.stateSorter);
 
 		const modes = filteredChanges
-			.sort(Channel.actionSorter)
 			.reduce(
 				(result, action) => {
 					let [letters, ...params] = result;

@@ -19,11 +19,6 @@ export class Channel implements ModeHolder {
 	static stateSorter = (a: ModeState, b: ModeState): number =>
 		a.mode.letter.localeCompare(b.mode.letter) || (a.param && b.param ? a.param.localeCompare(b.param) : 0);
 
-	static actionSorter = (a: SingleMode, b: SingleMode): number =>
-		a.action.localeCompare(b.action) ||
-		a.letter.localeCompare(b.letter) ||
-		(a.param && b.param ? a.param.localeCompare(b.param) : 0);
-
 	constructor(private readonly _name: string, creator: User, private readonly _server: Server) {}
 
 	addUser(user: User, isFirst: boolean = false): void {
@@ -75,13 +70,15 @@ export class Channel implements ModeHolder {
 	}
 
 	processModes(changes: SingleMode[], source: User, respond: SendResponseCallback): void {
+		const availablePrefixLetters = this._server.availablePrefixLetters;
+
 		const resultingModes = this._modes.slice();
 		const resultingAccess = new Map<User, string>(this._userAccess);
 		const filteredChanges: SingleMode[] = [];
 		for (const mode of changes) {
 			const modeDescriptor = this._server.findModeByLetter(mode.letter, 'channel')!;
 			const adding = mode.action === 'add';
-			const isPrefix = this._server.supportedChannelModes.prefix.includes(mode.letter);
+			const isPrefix = availablePrefixLetters.includes(mode.letter);
 			if (isPrefix) {
 				const foundPrefix = this._server.getPrefixDefinitionByModeChar(mode.letter);
 				if (!foundPrefix || !this.isUserAtLeast(source, foundPrefix.minLevelToSet, resultingAccess)) {
@@ -136,32 +133,47 @@ export class Channel implements ModeHolder {
 						user,
 						sortStringByOrder(
 							`${resultingAccess.get(user) ?? this._userAccess.get(user) ?? ''}${mode.letter}`,
-							this._server.supportedChannelModes.prefix
+							availablePrefixLetters
 						)
 					);
 				} else if (this._server.supportedChannelModes.list.includes(mode.letter)) {
 					// TODO, just ignore for now
 				} else {
-					const removalIndex = filteredChanges.findIndex(
-						change =>
-							change.letter === mode.letter && change.param === mode.param && change.action === 'remove'
-					);
+					const removalIndex = filteredChanges.findIndex(change => {
+						if (change.letter !== mode.letter) {
+							return false;
+						}
+						if (modeDescriptor.paramSpec === 'setOnly') {
+							return true;
+						}
+						return change.param === mode.param && change.action === 'remove';
+					});
 					if (removalIndex !== -1) {
 						filteredChanges.splice(removalIndex, 1);
-					} else if (
-						this._modes.find(
-							currentMode =>
-								currentMode.mode.letter === mode.letter && currentMode.mode.paramSpec !== 'setOnly'
-						)
-					) {
-						continue;
-					} else {
+						if (modeDescriptor.paramSpec === 'setOnly') {
+							filteredChanges.push(mode);
+						}
+						resultingModes.push({
+							mode: modeDescriptor,
+							param: mode.param
+						});
+					} else if (modeDescriptor.paramSpec === 'setOnly') {
 						filteredChanges.push(mode);
+						const resultRemovalIndex = resultingModes.findIndex(resMode => resMode.mode === modeDescriptor);
+						if (resultRemovalIndex !== -1) {
+							resultingModes.splice(resultRemovalIndex, 1);
+						}
+						resultingModes.push({
+							mode: modeDescriptor,
+							param: mode.param
+						});
+					} else if (!resultingModes.find(currentMode => currentMode.mode === modeDescriptor)) {
+						filteredChanges.push(mode);
+						resultingModes.push({
+							mode: modeDescriptor,
+							param: mode.param
+						});
 					}
-					resultingModes.push({
-						mode: modeDescriptor,
-						param: mode.param
-					});
 				}
 			} else if (mode.action === 'remove') {
 				if (isPrefix) {
@@ -202,7 +214,7 @@ export class Channel implements ModeHolder {
 				} else if (this._server.supportedChannelModes.list.includes(mode.letter)) {
 					// TODO, just ignore for now
 				} else {
-					const ignoreParam = this._server.supportedChannelModes.paramWhenSet.includes(mode.letter);
+					const ignoreParam = modeDescriptor.paramSpec === 'setOnly';
 					const addIndex = filteredChanges.findIndex(
 						change =>
 							change.letter === mode.letter &&
@@ -211,15 +223,14 @@ export class Channel implements ModeHolder {
 					);
 					if (addIndex !== -1) {
 						filteredChanges.splice(addIndex, 1);
-					} else if (this._modes.find(currentMode => currentMode.mode.letter === mode.letter)) {
+					} else if (resultingModes.find(currentMode => currentMode.mode === modeDescriptor)) {
 						filteredChanges.push(mode);
 					} else {
 						continue;
 					}
 
 					const setModeIndex = resultingModes.findIndex(
-						currMode =>
-							currMode.mode.letter === mode.letter && (ignoreParam || currMode.param === mode.param)
+						currMode => currMode.mode === modeDescriptor && (ignoreParam || currMode.param === mode.param)
 					);
 
 					if (setModeIndex !== -1) {
@@ -237,17 +248,24 @@ export class Channel implements ModeHolder {
 		this._modes = resultingModes.sort(Channel.stateSorter);
 		this._userAccess = resultingAccess;
 
+		let currentlyAdding = true;
 		const completeModeString = filteredChanges
-			.sort(Channel.actionSorter)
 			.reduce(
 				(result, action) => {
 					let [letters, ...params] = result;
-					if (action.action === 'remove') {
-						if (!letters.includes('-')) {
-							letters += '-';
+					if (letters.length === 0) {
+						currentlyAdding = action.action === 'add';
+						letters += currentlyAdding ? '+' : '-';
+					} else {
+						if (action.action === 'remove') {
+							if (currentlyAdding) {
+								letters += '-';
+								currentlyAdding = false;
+							}
+						} else if (!currentlyAdding) {
+							letters += '+';
+							currentlyAdding = true;
 						}
-					} else if (letters.length === 0) {
-						letters += '+';
 					}
 
 					letters += action.letter;
