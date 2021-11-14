@@ -356,7 +356,6 @@ export class Server {
 				createdText: `This server was created ${this._startupTime.toISOString()}`
 			});
 			const channelModes = this.supportedChannelModes;
-			console.log(channelModes);
 			user.sendNumeric(MessageTypes.Numerics.Reply004ServerInfo, {
 				serverName: this._serverAddress,
 				version: this._version,

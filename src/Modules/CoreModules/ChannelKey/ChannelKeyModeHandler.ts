@@ -18,7 +18,6 @@ export class ChannelKeyModeHandler extends ModeHandler {
 
 	keyIs(channel: Channel, keyToCheck: string | undefined): boolean {
 		const currentKey = this._getCurrentParam(channel);
-		console.log({ currentKey, keyToCheck });
 		return !currentKey || currentKey === keyToCheck;
 	}
 }
