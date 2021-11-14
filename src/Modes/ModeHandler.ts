@@ -1,7 +1,7 @@
+import type { Server } from '../Server';
 import { assertNever } from '../Toolkit/TypeTools';
 import type { User } from '../User';
 import type { ModeHolder } from './ModeHolder';
-import type { Server } from '../Server';
 
 export type ModeParamSpec = 'never' | 'setOnly' | 'always';
 export type ModeType = 'user' | 'channel';
@@ -54,6 +54,9 @@ export abstract class ModeHandler {
 	checkValidity(target: ModeHolder, user: User, server: Server, adding: boolean, param?: string): boolean {
 		return true;
 	}
-
 	abstract checkAccess(target: ModeHolder, user: User, server: Server, adding: boolean, param?: string): boolean;
+
+	protected _getCurrentParam(holder: ModeHolder): string | undefined {
+		return holder.getModeData(this)?.param;
+	}
 }

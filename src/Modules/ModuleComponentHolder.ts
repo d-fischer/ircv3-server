@@ -13,6 +13,14 @@ export class ModuleComponentHolder {
 	constructor(private readonly _module: Module, private readonly _server: Server) {}
 
 	addMode(mode: ModeHandler): void {
+		if (this._server.findModeByName(mode.name, mode.type)) {
+			throw new Error(`Mode registration conflict: trying to add more than one mode with the name ${mode.name}`);
+		}
+		if (this._server.findModeByLetter(mode.letter, mode.type)) {
+			throw new Error(
+				`Mode registration conflict: trying to add more than one mode with the letter ${mode.letter}`
+			);
+		}
 		this._server.addMode(mode);
 		this._modes.push(mode);
 	}

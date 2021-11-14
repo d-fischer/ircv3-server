@@ -13,16 +13,12 @@ export class ChannelKeyModeHandler extends ModeHandler {
 	}
 
 	checkValidity(channel: Channel, user: User, server: Server, adding: boolean, param?: string): boolean {
-		return adding || this._getCurrentKey(channel) === param;
+		return adding || this._getCurrentParam(channel) === param;
 	}
 
 	keyIs(channel: Channel, keyToCheck: string | undefined): boolean {
-		const currentKey = this._getCurrentKey(channel);
+		const currentKey = this._getCurrentParam(channel);
 		console.log({ currentKey, keyToCheck });
 		return !currentKey || currentKey === keyToCheck;
-	}
-
-	private _getCurrentKey(channel: Channel) {
-		return channel.getModeData(this)?.param;
 	}
 }

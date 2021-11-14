@@ -1,4 +1,5 @@
 import { ChannelKeyModule } from './Modules/CoreModules/ChannelKey';
+import { ChannelLimitModule } from './Modules/CoreModules/ChannelLimit';
 import { InvisibleModule } from './Modules/CoreModules/Invisible';
 import { InviteModule } from './Modules/CoreModules/Invite';
 import { KillModule } from './Modules/CoreModules/Kill';
@@ -24,6 +25,7 @@ server.loadModule(TopicLockModule);
 server.loadModule(SecretModule);
 server.loadModule(ModeratedModule);
 server.loadModule(ChannelKeyModule);
+server.loadModule(ChannelLimitModule);
 
 server.loadModule(InviteModule);
 

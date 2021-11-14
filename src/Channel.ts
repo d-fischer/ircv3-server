@@ -54,6 +54,10 @@ export class Channel implements ModeHolder {
 		return new Set<User>(this._userAccess.keys());
 	}
 
+	get numberOfUsers(): number {
+		return this._userAccess.size;
+	}
+
 	get modes(): ModeState[] {
 		return this._modes;
 	}
@@ -144,7 +148,12 @@ export class Channel implements ModeHolder {
 					);
 					if (removalIndex !== -1) {
 						filteredChanges.splice(removalIndex, 1);
-					} else if (this._modes.find(currentMode => currentMode.mode.letter === mode.letter)) {
+					} else if (
+						this._modes.find(
+							currentMode =>
+								currentMode.mode.letter === mode.letter && currentMode.mode.paramSpec !== 'setOnly'
+						)
+					) {
 						continue;
 					} else {
 						filteredChanges.push(mode);

@@ -264,6 +264,10 @@ export class User extends EventEmitter implements ModeHolder {
 		return this._modes.some(m => m.mode.name === name);
 	}
 
+	getModeData(mode: ModeHandler): ModeState | null {
+		return this._modes.find(m => m.mode === mode) ?? null;
+	}
+
 	processModes(changes: SingleMode[], source: User, respond: SendResponseCallback): void {
 		const resultingModes = this._modes.slice();
 		const filteredChanges: SingleMode[] = [];

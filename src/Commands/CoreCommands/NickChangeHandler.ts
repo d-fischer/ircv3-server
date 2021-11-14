@@ -19,7 +19,7 @@ export class NickChangeHandler extends CommandHandler<MessageTypes.Commands.Nick
 	): void {
 		const registered = user.isRegistered;
 		const newNick = cmd.params.nick;
-		if (newNick === user.nick) {
+		if (registered && newNick === user.nick) {
 			return;
 		}
 		const oldPrefix = user.isRegistered ? user.prefix : { nick: '*' };
