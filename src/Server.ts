@@ -687,8 +687,7 @@ export class Server {
 		}
 	}
 
-	loadModule<T extends Module>(moduleClass: new () => T): void {
-		const module = new moduleClass();
+	loadModule(module: Module): void {
 		module.load(this);
 	}
 

@@ -18,24 +18,24 @@ const server = new Server({
 	networkName: 'LocalTestNet'
 });
 
-server.loadModule(InvisibleModule);
+server.loadModule(new InvisibleModule());
 
-server.loadModule(NoExternalMessagesModule);
-server.loadModule(TopicLockModule);
-server.loadModule(SecretModule);
-server.loadModule(ModeratedModule);
-server.loadModule(ChannelKeyModule);
-server.loadModule(ChannelLimitModule);
+server.loadModule(new NoExternalMessagesModule());
+server.loadModule(new TopicLockModule());
+server.loadModule(new SecretModule());
+server.loadModule(new ModeratedModule());
+server.loadModule(new ChannelKeyModule());
+server.loadModule(new ChannelLimitModule());
 
-server.loadModule(InviteModule);
+server.loadModule(new InviteModule());
 
-server.loadModule(ListModule);
-server.loadModule(UserHostModule);
+server.loadModule(new ListModule());
+server.loadModule(new UserHostModule());
 
-server.loadModule(OperModule);
-server.loadModule(KillModule);
+server.loadModule(new OperModule());
+server.loadModule(new KillModule());
 
-server.loadModule(TimeModule);
+server.loadModule(new TimeModule());
 
 server.addOperLogin({
 	userName: 'testLocal',
