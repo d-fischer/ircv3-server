@@ -118,46 +118,18 @@ export class Channel implements ModeHolder {
 						continue;
 					}
 
-					const removalIndex = filteredChanges.findIndex(
-						change =>
-							change.letter === mode.letter && change.param === userNick && change.action === 'remove'
-					);
-					if (removalIndex !== -1) {
-						filteredChanges.splice(removalIndex, 1);
-					} else if (this._userAccess.get(user)!.includes(mode.letter)) {
+					if (resultingAccess.get(user)!.includes(mode.letter)) {
 						continue;
-					} else {
-						filteredChanges.push(mode);
 					}
+					filteredChanges.push(mode);
 					resultingAccess.set(
 						user,
-						sortStringByOrder(
-							`${resultingAccess.get(user) ?? this._userAccess.get(user) ?? ''}${mode.letter}`,
-							availablePrefixLetters
-						)
+						sortStringByOrder(`${resultingAccess.get(user)!}${mode.letter}`, availablePrefixLetters)
 					);
 				} else if (this._server.supportedChannelModes.list.includes(mode.letter)) {
 					// TODO, just ignore for now
 				} else {
-					const removalIndex = filteredChanges.findIndex(change => {
-						if (change.letter !== mode.letter) {
-							return false;
-						}
-						if (modeDescriptor.paramSpec === 'setOnly') {
-							return true;
-						}
-						return change.param === mode.param && change.action === 'remove';
-					});
-					if (removalIndex !== -1) {
-						filteredChanges.splice(removalIndex, 1);
-						if (modeDescriptor.paramSpec === 'setOnly') {
-							filteredChanges.push(mode);
-						}
-						resultingModes.push({
-							mode: modeDescriptor,
-							param: mode.param
-						});
-					} else if (modeDescriptor.paramSpec === 'setOnly') {
+					if (modeDescriptor.paramSpec === 'setOnly') {
 						filteredChanges.push(mode);
 						const resultRemovalIndex = resultingModes.findIndex(resMode => resMode.mode === modeDescriptor);
 						if (resultRemovalIndex !== -1) {
@@ -196,41 +168,24 @@ export class Channel implements ModeHolder {
 						continue;
 					}
 
-					const addIndex = filteredChanges.findIndex(
-						change => change.letter === mode.letter && change.param === userNick && change.action === 'add'
-					);
-					if (addIndex !== -1) {
-						filteredChanges.splice(addIndex, 1);
-					} else if (this._userAccess.get(user)!.includes(mode.letter)) {
-						filteredChanges.push(mode);
-					} else {
+					if (!resultingAccess.get(user)!.includes(mode.letter)) {
 						continue;
 					}
 
-					resultingAccess.set(
-						user,
-						(resultingAccess.get(user) ?? this._userAccess.get(user) ?? '').replace(mode.letter, '')
-					);
+					filteredChanges.push(mode);
+					resultingAccess.set(user, resultingAccess.get(user)!.replace(mode.letter, ''));
 				} else if (this._server.supportedChannelModes.list.includes(mode.letter)) {
 					// TODO, just ignore for now
 				} else {
-					const ignoreParam = modeDescriptor.paramSpec === 'setOnly';
-					const addIndex = filteredChanges.findIndex(
-						change =>
-							change.letter === mode.letter &&
-							(ignoreParam || change.param === mode.param) &&
-							change.action === 'add'
-					);
-					if (addIndex !== -1) {
-						filteredChanges.splice(addIndex, 1);
-					} else if (resultingModes.find(currentMode => currentMode.mode === modeDescriptor)) {
-						filteredChanges.push(mode);
-					} else {
+					if (!resultingModes.find(currentMode => currentMode.mode === modeDescriptor)) {
 						continue;
 					}
+					filteredChanges.push(mode);
 
 					const setModeIndex = resultingModes.findIndex(
-						currMode => currMode.mode === modeDescriptor && (ignoreParam || currMode.param === mode.param)
+						currMode =>
+							currMode.mode === modeDescriptor &&
+							(modeDescriptor.paramSpec === 'setOnly' || currMode.param === mode.param)
 					);
 
 					if (setModeIndex !== -1) {
