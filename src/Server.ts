@@ -198,13 +198,17 @@ export class Server {
 	get supportedChannelModes(): SupportedModesByType {
 		const modes = Array.from(this._registeredModes).filter(mode => mode.type === 'channel');
 
-		const listModes: string[] = [];
+		const listModes = [];
 		const alwaysWithParamModes = [];
 		const paramWhenSetModes = [];
 		const noParamModes = [];
 
 		for (const mode of modes) {
 			switch (mode.paramSpec) {
+				case 'list': {
+					listModes.push(mode.letter);
+					break;
+				}
 				case 'always': {
 					alwaysWithParamModes.push(mode.letter);
 					break;
@@ -566,7 +570,7 @@ export class Server {
 		return this._nickUserMap.get(this.caseFoldString(nick)) ?? null;
 	}
 
-	nickMatchesWildcard(nick: string, wildcard: string): boolean {
+	identifierMatchesWildcard(nick: string, wildcard: string): boolean {
 		return matchesWildcard(this.caseFoldString(nick), this.caseFoldString(wildcard));
 	}
 

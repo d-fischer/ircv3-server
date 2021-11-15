@@ -29,7 +29,8 @@ export class WhoHandler extends CommandHandler<MessageTypes.Commands.WhoQuery> {
 		let foundUsers = foundChannel
 			? [...foundChannel.users]
 			: [...server.users].filter(
-					u => u.isRegistered && (searchMask === null || server.nickMatchesWildcard(u.nick!, searchMask))
+					u =>
+						u.isRegistered && (searchMask === null || server.identifierMatchesWildcard(u.nick!, searchMask))
 			  );
 
 		if (hasOperFlag) {
@@ -58,7 +59,7 @@ export class WhoHandler extends CommandHandler<MessageTypes.Commands.WhoQuery> {
 		}
 
 		respond(MessageTypes.Numerics.Reply315EndOfWho, {
-			query: cmd.params.mask ?? '*',
+			query: cmd.params.mask,
 			suffix: 'End of /WHO list'
 		});
 	}

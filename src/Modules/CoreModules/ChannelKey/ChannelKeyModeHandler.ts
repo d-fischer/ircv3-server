@@ -1,15 +1,11 @@
 import type { Channel } from '../../../Channel';
-import { ModeHandler } from '../../../Modes/ModeHandler';
+import { ParamAlwaysChannelModeHandler } from '../../../Modes/Channel/ParamAlwaysChannelModeHandler';
 import type { Server } from '../../../Server';
 import type { User } from '../../../User';
 
-export class ChannelKeyModeHandler extends ModeHandler {
+export class ChannelKeyModeHandler extends ParamAlwaysChannelModeHandler {
 	constructor() {
-		super('key', 'k', 'always', 'channel');
-	}
-
-	checkAccess(target: Channel, user: User): boolean {
-		return target.isUserAtLeast(user, 'op');
+		super('key', 'k', 'op');
 	}
 
 	checkValidity(channel: Channel, user: User, server: Server, adding: boolean, param?: string): boolean {

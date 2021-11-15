@@ -1,12 +1,12 @@
-import type { Channel } from '../../../Channel';
-import type { User } from '../../../User';
-import { Module, HookResult } from '../../Module';
-import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
-import type { ChannelVisibilityResult } from '../../ModuleHook';
-import { SecretModeHandler } from './SecretModeHandler';
+import type { Channel } from '../../Channel';
+import { NoParamChannelModeHandler } from '../../Modes/Channel/NoParamChannelModeHandler';
+import type { User } from '../../User';
+import { HookResult, Module } from '../Module';
+import type { ModuleComponentHolder } from '../ModuleComponentHolder';
+import type { ChannelVisibilityResult } from '../ModuleHook';
 
 export class SecretModule extends Module {
-	private readonly _secretMode = new SecretModeHandler();
+	private readonly _secretMode = new NoParamChannelModeHandler('secret', 's', 'op');
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._secretMode);

@@ -3,15 +3,15 @@ import { assertNever } from '../Toolkit/TypeTools';
 import type { User } from '../User';
 import type { ModeHolder } from './ModeHolder';
 
-export type ModeParamSpec = 'never' | 'setOnly' | 'always';
+export type ModeParamSpec = 'never' | 'setOnly' | 'always' | 'list';
 export type ModeType = 'user' | 'channel';
 
 export abstract class ModeHandler {
 	constructor(
 		private readonly _name: string,
 		private readonly _letter: string,
-		private readonly _params: ModeParamSpec,
-		private readonly _type: ModeType
+		private readonly _type: ModeType,
+		private readonly _params: ModeParamSpec
 	) {}
 
 	get name(): string {
@@ -40,7 +40,8 @@ export abstract class ModeHandler {
 				return isSetting;
 			}
 
-			case 'always': {
+			case 'always':
+			case 'list': {
 				return true;
 			}
 

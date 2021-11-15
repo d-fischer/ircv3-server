@@ -1,14 +1,13 @@
-import type { Channel } from '../../../Channel';
-import { SimpleModeHandler } from '../../../Modes/SimpleModeHandler';
+import { UserModeHandler } from '../../../Modes/UserModeHandler';
 import type { Server } from '../../../Server';
 import type { User } from '../../../User';
 
-export class LocalOperModeHandler extends SimpleModeHandler {
+export class LocalOperModeHandler extends UserModeHandler {
 	constructor() {
-		super('localOper', 'O', 'user');
+		super('localOper', 'O');
 	}
 
-	checkAccess(channel: Channel, user: User, server: Server, adding: boolean): boolean {
-		return !adding;
+	checkAccess(target: User, user: User, server: Server, adding: boolean): boolean {
+		return user === target && !adding;
 	}
 }

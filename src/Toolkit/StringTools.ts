@@ -35,6 +35,9 @@ export function joinChunks(tokens: string[], limit: number): string[] {
 }
 
 export function matchesWildcard(str: string, wildcard: string): boolean {
+	if (wildcard === '*') {
+		return true;
+	}
 	if (!wildcard.includes('*')) {
 		return str === wildcard;
 	}

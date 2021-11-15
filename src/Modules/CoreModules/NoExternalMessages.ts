@@ -1,14 +1,14 @@
-import type { SendResponseCallback } from '../../../SendResponseCallback';
-import { Module, HookResult } from '../../Module';
-import type { Channel } from '../../../Channel';
-import type { User } from '../../../User';
-import type { ChannelCreateFlags } from '../../ModuleHook';
-import { NoExternalMessagesModeHandler } from './NoExternalMessagesModeHandler';
-import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
 import { MessageTypes } from 'ircv3';
+import type { Channel } from '../../Channel';
+import { NoParamChannelModeHandler } from '../../Modes/Channel/NoParamChannelModeHandler';
+import type { SendResponseCallback } from '../../SendResponseCallback';
+import type { User } from '../../User';
+import { HookResult, Module } from '../Module';
+import type { ModuleComponentHolder } from '../ModuleComponentHolder';
+import type { ChannelCreateFlags } from '../ModuleHook';
 
 export class NoExternalMessagesModule extends Module {
-	private readonly _noExternalMessagesMode = new NoExternalMessagesModeHandler();
+	private readonly _noExternalMessagesMode = new NoParamChannelModeHandler('noExternalMessages', 'n', 'op');
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._noExternalMessagesMode);

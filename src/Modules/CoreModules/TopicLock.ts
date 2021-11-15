@@ -1,14 +1,14 @@
-import type { SendResponseCallback } from '../../../SendResponseCallback';
-import { Module, HookResult } from '../../Module';
 import { MessageTypes } from 'ircv3';
-import type { Channel } from '../../../Channel';
-import type { User } from '../../../User';
-import type { ChannelCreateFlags } from '../../ModuleHook';
-import { TopicLockModeHandler } from './TopicLockModeHandler';
-import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
+import type { Channel } from '../../Channel';
+import { NoParamChannelModeHandler } from '../../Modes/Channel/NoParamChannelModeHandler';
+import type { SendResponseCallback } from '../../SendResponseCallback';
+import type { User } from '../../User';
+import { HookResult, Module } from '../Module';
+import type { ModuleComponentHolder } from '../ModuleComponentHolder';
+import type { ChannelCreateFlags } from '../ModuleHook';
 
 export class TopicLockModule extends Module {
-	private readonly _topicLockMode = new TopicLockModeHandler();
+	private readonly _topicLockMode = new NoParamChannelModeHandler('topicLock', 't', 'op');
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._topicLockMode);

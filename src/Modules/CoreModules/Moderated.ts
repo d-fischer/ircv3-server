@@ -1,13 +1,13 @@
 import { MessageTypes } from 'ircv3';
-import type { Channel } from '../../../Channel';
-import type { SendResponseCallback } from '../../../SendResponseCallback';
-import type { User } from '../../../User';
-import { HookResult, Module } from '../../Module';
-import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
-import { ModeratedModeHandler } from './ModeratedModeHandler';
+import type { Channel } from '../../Channel';
+import { NoParamChannelModeHandler } from '../../Modes/Channel/NoParamChannelModeHandler';
+import type { SendResponseCallback } from '../../SendResponseCallback';
+import type { User } from '../../User';
+import { HookResult, Module } from '../Module';
+import type { ModuleComponentHolder } from '../ModuleComponentHolder';
 
 export class ModeratedModule extends Module {
-	private readonly _moderatedMode = new ModeratedModeHandler();
+	private readonly _moderatedMode = new NoParamChannelModeHandler('moderated', 'm', 'halfop');
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._moderatedMode);

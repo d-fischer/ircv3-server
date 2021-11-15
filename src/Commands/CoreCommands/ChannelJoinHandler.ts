@@ -31,7 +31,7 @@ export class ChannelJoinHandler extends CommandHandler<MessageTypes.Commands.Cha
 
 		const channel = server.getChannelByName(channelName);
 		if (channel) {
-			const res = server.callHook('channelJoin', channel, user, cmd, respond);
+			const res = server.callHook('channelJoin', channel, user, cmd, respond, server);
 			if (res === HookResult.DENY) {
 				return;
 			}

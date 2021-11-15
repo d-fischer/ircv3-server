@@ -1,5 +1,7 @@
 import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
 import { MessageTypes, prefixToString } from 'ircv3';
+import type { ListChangeHandler } from './Modes/Channel/ListChannelModeHandler';
+import { ListChannelModeHandler } from './Modes/Channel/ListChannelModeHandler';
 import type { ModeHandler } from './Modes/ModeHandler';
 import type { ModeHolder } from './Modes/ModeHolder';
 import type { SendableMessageProperties } from './SendableMessageProperties';
@@ -74,9 +76,18 @@ export class Channel implements ModeHolder {
 
 		const resultingModes = this._modes.slice();
 		const resultingAccess = new Map<User, string>(this._userAccess);
+		const listChangeHandlers = new Map<ListChannelModeHandler, ListChangeHandler>();
+		const listsSent = new Set<ListChannelModeHandler>();
 		const filteredChanges: SingleMode[] = [];
 		for (const mode of changes) {
 			const modeDescriptor = this._server.findModeByLetter(mode.letter, 'channel')!;
+			if (mode.action === 'getList') {
+				if (modeDescriptor instanceof ListChannelModeHandler && !listsSent.has(modeDescriptor)) {
+					listsSent.add(modeDescriptor);
+					modeDescriptor.sendList(this, source, respond);
+				}
+				continue;
+			}
 			const adding = mode.action === 'add';
 			const isPrefix = availablePrefixLetters.includes(mode.letter);
 			if (isPrefix) {
@@ -126,8 +137,19 @@ export class Channel implements ModeHolder {
 						user,
 						sortStringByOrder(`${resultingAccess.get(user)!}${mode.letter}`, availablePrefixLetters)
 					);
-				} else if (this._server.supportedChannelModes.list.includes(mode.letter)) {
-					// TODO, just ignore for now
+				} else if (modeDescriptor instanceof ListChannelModeHandler) {
+					// eslint-disable-next-line @typescript-eslint/init-declarations
+					let changer;
+					if (listChangeHandlers.has(modeDescriptor)) {
+						changer = listChangeHandlers.get(modeDescriptor)!;
+					} else {
+						changer = modeDescriptor.change(this, this._server, source);
+						listChangeHandlers.set(modeDescriptor, changer);
+					}
+					if (!changer.has(mode.param!)) {
+						filteredChanges.push(mode);
+						changer.add(mode.param!);
+					}
 				} else {
 					if (modeDescriptor.paramSpec === 'setOnly') {
 						filteredChanges.push(mode);
@@ -174,8 +196,19 @@ export class Channel implements ModeHolder {
 
 					filteredChanges.push(mode);
 					resultingAccess.set(user, resultingAccess.get(user)!.replace(mode.letter, ''));
-				} else if (this._server.supportedChannelModes.list.includes(mode.letter)) {
-					// TODO, just ignore for now
+				} else if (modeDescriptor instanceof ListChannelModeHandler) {
+					// eslint-disable-next-line @typescript-eslint/init-declarations
+					let changer;
+					if (listChangeHandlers.has(modeDescriptor)) {
+						changer = listChangeHandlers.get(modeDescriptor)!;
+					} else {
+						changer = modeDescriptor.change(this, this._server, source);
+						listChangeHandlers.set(modeDescriptor, changer);
+					}
+					if (changer.has(mode.param!)) {
+						filteredChanges.push(mode);
+						changer.remove(mode.param!);
+					}
 				} else {
 					if (!resultingModes.find(currentMode => currentMode.mode === modeDescriptor)) {
 						continue;
@@ -202,6 +235,10 @@ export class Channel implements ModeHolder {
 		// normalize (sort) modes
 		this._modes = resultingModes.sort(Channel.stateSorter);
 		this._userAccess = resultingAccess;
+
+		for (const listChanges of listChangeHandlers.values()) {
+			listChanges.finalize();
+		}
 
 		let currentlyAdding = true;
 		const completeModeString = filteredChanges

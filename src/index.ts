@@ -1,3 +1,4 @@
+import { ChannelBanModule } from './Modules/CoreModules/ChannelBan';
 import { ChannelKeyModule } from './Modules/CoreModules/ChannelKey';
 import { ChannelLimitModule } from './Modules/CoreModules/ChannelLimit';
 import { InvisibleModule } from './Modules/CoreModules/Invisible';
@@ -26,6 +27,7 @@ server.loadModule(new SecretModule());
 server.loadModule(new ModeratedModule());
 server.loadModule(new ChannelKeyModule());
 server.loadModule(new ChannelLimitModule());
+server.loadModule(new ChannelBanModule());
 
 server.loadModule(new InviteModule());
 
@@ -49,3 +51,8 @@ server.addOperLogin({
 
 server.listen(6667);
 console.log('Listening on port 6667');
+export { ModeratedModule } from './Modules/CoreModules/Moderated';
+export { NoExternalMessagesModule } from './Modules/CoreModules/NoExternalMessages';
+export { InvisibleModule } from './Modules/CoreModules/Invisible';
+export { SecretModule } from './Modules/CoreModules/Secret';
+export { TopicLockModule } from './Modules/CoreModules/TopicLock';

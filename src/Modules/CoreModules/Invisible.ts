@@ -1,10 +1,10 @@
-import { Module, HookResult } from '../../Module';
-import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
-import { InvisibleModeHandler } from './InvisibleModeHandler';
-import type { User } from '../../../User';
+import { UserModeHandler } from '../../Modes/UserModeHandler';
+import type { User } from '../../User';
+import { HookResult, Module } from '../Module';
+import type { ModuleComponentHolder } from '../ModuleComponentHolder';
 
 export class InvisibleModule extends Module {
-	private readonly _invisibleMode = new InvisibleModeHandler();
+	private readonly _invisibleMode = new UserModeHandler('invisible', 'i');
 
 	init(components: ModuleComponentHolder): void {
 		components.addMode(this._invisibleMode);

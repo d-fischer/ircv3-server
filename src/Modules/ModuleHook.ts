@@ -2,6 +2,7 @@ import type { MessageTypes, SingleMode } from 'ircv3';
 import type { Channel } from '../Channel';
 import type { ModeHolder } from '../Modes/ModeHolder';
 import type { SendResponseCallback } from '../SendResponseCallback';
+import type { Server } from '../Server';
 import type { ModeState } from '../Toolkit/ModeTools';
 import type { User } from '../User';
 import type { HookResult, Module } from './Module';
@@ -21,7 +22,8 @@ export interface ModuleHookTypes {
 		channel: Channel,
 		user: User,
 		cmd: MessageTypes.Commands.ChannelJoin,
-		respond: SendResponseCallback
+		respond: SendResponseCallback,
+		server: Server
 	) => HookResult;
 	channelMessage: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => HookResult;
 	channelNotice: (channel: Channel, user: User, message: string, respond: SendResponseCallback) => HookResult;

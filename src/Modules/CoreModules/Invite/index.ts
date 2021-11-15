@@ -1,16 +1,16 @@
 import { MessageTypes } from 'ircv3';
-import type { SendResponseCallback } from '../../../SendResponseCallback';
-import { Module, HookResult } from '../../Module';
-import { InviteOnlyModeHandler } from './InviteOnlyModeHandler';
-import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
-import { InviteCommandHandler } from './InviteCommandHandler';
-import type { Invite } from './Invite';
-import type { User } from '../../../User';
 import type { Channel } from '../../../Channel';
+import { NoParamChannelModeHandler } from '../../../Modes/Channel/NoParamChannelModeHandler';
+import type { SendResponseCallback } from '../../../SendResponseCallback';
+import type { User } from '../../../User';
+import { HookResult, Module } from '../../Module';
+import type { ModuleComponentHolder } from '../../ModuleComponentHolder';
+import type { Invite } from './Invite';
+import { InviteCommandHandler } from './InviteCommandHandler';
 
 export class InviteModule extends Module {
 	private readonly _invitesByUser = new Map<User, Set<Invite>>();
-	private readonly _inviteOnlyMode = new InviteOnlyModeHandler();
+	private readonly _inviteOnlyMode = new NoParamChannelModeHandler('inviteOnly', 'i', 'op');
 	private readonly _inviteCommand = new InviteCommandHandler(this._inviteOnlyMode, this);
 
 	init(components: ModuleComponentHolder): void {

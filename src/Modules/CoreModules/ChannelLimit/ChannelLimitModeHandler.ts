@@ -1,15 +1,11 @@
 import type { Channel } from '../../../Channel';
-import { ModeHandler } from '../../../Modes/ModeHandler';
+import { ParamWhenSetChannelModeHandler } from '../../../Modes/Channel/ParamWhenSetChannelModeHandler';
 import type { Server } from '../../../Server';
 import type { User } from '../../../User';
 
-export class ChannelLimitModeHandler extends ModeHandler {
+export class ChannelLimitModeHandler extends ParamWhenSetChannelModeHandler {
 	constructor() {
-		super('limit', 'l', 'setOnly', 'channel');
-	}
-
-	checkAccess(target: Channel, user: User): boolean {
-		return target.isUserAtLeast(user, 'op');
+		super('limit', 'l', 'op');
 	}
 
 	checkValidity(channel: Channel, user: User, server: Server, adding: boolean, param?: string): boolean {
