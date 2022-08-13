@@ -754,6 +754,7 @@ export class Server {
 			}
 			case 'rfc1459':
 			case 'rfc1459-strict': {
+				/* eslint-disable @typescript-eslint/naming-convention */
 				const specialReplacements: Record<string, string | undefined> = {
 					'[': '{',
 					']': '}',
@@ -762,6 +763,7 @@ export class Server {
 				if (this._caseMapping === 'rfc1459-strict') {
 					specialReplacements['~'] = '^';
 				}
+				/* eslint-enable @typescript-eslint/naming-convention */
 				return str.replace(/[A-Z[\]\\~]/g, l => specialReplacements[l] ?? l.toLowerCase());
 			}
 			default: {

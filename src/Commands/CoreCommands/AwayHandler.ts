@@ -11,6 +11,7 @@ export class AwayHandler extends CommandHandler<MessageTypes.Commands.Away> {
 
 	handleCommand(cmd: MessageTypes.Commands.Away, user: User, server: Server, respond: SendResponseCallback): void {
 		// handle empty string too, even though it shouldn't come through to here
+		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		const msg = cmd.params.message || null;
 
 		user.setAwayMessage(msg);

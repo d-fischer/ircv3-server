@@ -8,8 +8,11 @@ pids
 *.seed
 *.pid.lock
 lib
+es
 node_modules/
 *.tgz
 .yarn-integrity
 .env
 .idea
+package-lock.json
+yarn.lock
