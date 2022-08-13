@@ -59,6 +59,7 @@ export interface ServerConfiguration {
 	nickLength?: number;
 	topicLength?: number;
 	userLength?: number;
+	independentUsers?: boolean;
 }
 
 export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
@@ -76,6 +77,7 @@ export class Server {
 	private readonly _nickLength: number;
 	private readonly _topicLength: number;
 	private readonly _userLength: number;
+	private readonly _independentUsers: boolean;
 
 	private readonly _users = new Set<User>();
 	private readonly _nickUserMap = new Map<string, User>();
@@ -152,6 +154,7 @@ export class Server {
 		this._nickLength = config.nickLength ?? 31;
 		this._topicLength = config.topicLength ?? 390;
 		this._userLength = config.userLength ?? 12;
+		this._independentUsers = config.independentUsers ?? false;
 
 		this.addCoreCapabilities();
 		this.addCoreCommands();
@@ -327,20 +330,24 @@ export class Server {
 			});
 		});
 		user.onRegister(() => {
-			this._nickUserMap.set(this.caseFoldString(user.nick!), user);
+			if (!this._independentUsers) {
+				this._nickUserMap.set(this.caseFoldString(user.nick!), user);
+			}
 			this.sendServerSupportInfo(user);
 			this.sendMotd(user);
 		});
 		user.onNickChange(oldNick => {
-			const newNickCaseFolded = this.caseFoldString(user.nick!);
-			if (!oldNick) {
-				this._nickUserMap.set(newNickCaseFolded, user);
-				return;
-			}
-			const oldNickCaseFolded = this.caseFoldString(oldNick);
-			if (newNickCaseFolded !== oldNickCaseFolded) {
-				this._nickUserMap.delete(oldNickCaseFolded);
-				this._nickUserMap.set(newNickCaseFolded, user);
+			if (!this._independentUsers) {
+				const newNickCaseFolded = this.caseFoldString(user.nick!);
+				if (!oldNick) {
+					this._nickUserMap.set(newNickCaseFolded, user);
+					return;
+				}
+				const oldNickCaseFolded = this.caseFoldString(oldNick);
+				if (newNickCaseFolded !== oldNickCaseFolded) {
+					this._nickUserMap.delete(oldNickCaseFolded);
+					this._nickUserMap.set(newNickCaseFolded, user);
+				}
 			}
 		});
 		this._users.add(user);
@@ -437,15 +444,17 @@ export class Server {
 		user.addChannel(channel);
 		channel.addUser(user, creating);
 
-		channel.broadcastMessage(
-			MessageTypes.Commands.ChannelJoin,
-			{
-				channel: channel.name
-			},
-			user.prefix,
-			undefined,
-			user
-		);
+		if (!this._independentUsers) {
+			channel.broadcastMessage(
+				MessageTypes.Commands.ChannelJoin,
+				{
+					channel: channel.name
+				},
+				user.prefix,
+				undefined,
+				user
+			);
+		}
 
 		respond(
 			MessageTypes.Commands.ChannelJoin,
@@ -523,21 +532,26 @@ export class Server {
 			user.prefix
 		);
 
-		channel.broadcastMessage(
-			MessageTypes.Commands.ChannelPart,
-			{
-				channel: channel.name,
-				reason
-			},
-			user.prefix,
-			undefined,
-			user
-		);
+		if (!this._independentUsers) {
+			channel.broadcastMessage(
+				MessageTypes.Commands.ChannelPart,
+				{
+					channel: channel.name,
+					reason
+				},
+				user.prefix,
+				undefined,
+				user
+			);
+		}
 
 		this.unlinkUserFromChannel(user, channel);
 	}
 
 	nickExists(nick: string): boolean {
+		if (this._independentUsers) {
+			return false;
+		}
 		return this._nickUserMap.has(this.caseFoldString(nick));
 	}
 
@@ -549,6 +563,9 @@ export class Server {
 	}
 
 	getUserByNick(nick: string): User | null {
+		if (this._independentUsers) {
+			throw new Error('getUserByNick attempted with independentUsers turned on');
+		}
 		return this._nickUserMap.get(this.caseFoldString(nick)) ?? null;
 	}
 
@@ -573,19 +590,21 @@ export class Server {
 			return;
 		}
 		if (user.isRegistered) {
-			this.forEachCommonChannelUser(user, commonUser =>
-				commonUser.sendMessage(
-					MessageTypes.Commands.ClientQuit,
-					{
-						message
-					},
-					user.prefix
-				)
-			);
+			if (!this._independentUsers) {
+				this.forEachCommonChannelUser(user, commonUser =>
+					commonUser.sendMessage(
+						MessageTypes.Commands.ClientQuit,
+						{
+							message
+						},
+						user.prefix
+					)
+				);
+			}
 			for (const channel of user.channels) {
 				this.unlinkUserFromChannel(user, channel);
 			}
-			if (user.nick) {
+			if (user.nick && !this._independentUsers) {
 				this._nickUserMap.delete(this.caseFoldString(user.nick));
 			}
 		}
@@ -695,16 +714,23 @@ export class Server {
 		this._registeredModes.delete(mode);
 	}
 
-	addCommand(command: CommandHandler): boolean {
-		if (this._commandHandlers.has(command.command)) {
+	addCommandHandler(handler: CommandHandler): boolean {
+		if (this._commandHandlers.has(handler.command)) {
 			return false;
 		}
-		this._commandHandlers.set(command.command, command);
+		if (!this._knownCommands.has(handler.command)) {
+			this._knownCommands.set(handler.command, handler.commandType);
+		}
+		this._commandHandlers.set(handler.command, handler);
 		return true;
 	}
 
-	removeCommand(command: CommandHandler): void {
-		this._commandHandlers.delete(command.command);
+	removeCommandHandler(handler: CommandHandler): void {
+		this._commandHandlers.delete(handler.command);
+	}
+
+	removeCommand(command: MessageConstructor): void {
+		this._knownCommands.delete(command.COMMAND);
 	}
 
 	callHook<HookType extends keyof ModuleHookTypes>(
@@ -755,24 +781,24 @@ export class Server {
 	}
 
 	protected addCoreCommands(): void {
-		this.addCommand(new CapabilityNegotiationHandler());
-		this.addCommand(new UserRegistrationHandler());
-		this.addCommand(new NickChangeHandler());
-		this.addCommand(new ClientQuitHandler());
-		this.addCommand(new PingHandler());
-		this.addCommand(new PongHandler());
-		this.addCommand(new PrivmsgHandler());
-		this.addCommand(new NoticeHandler());
-		this.addCommand(new ModeCommandHandler());
-		this.addCommand(new ChannelJoinHandler());
-		this.addCommand(new ChannelPartHandler());
-		this.addCommand(new NamesHandler());
-		this.addCommand(new TagMessageHandler());
-		this.addCommand(new TopicHandler());
-		this.addCommand(new ChannelKickHandler());
-		this.addCommand(new AwayHandler());
-		this.addCommand(new WhoHandler());
-		this.addCommand(new WhoisHandler());
+		this.addCommandHandler(new CapabilityNegotiationHandler());
+		this.addCommandHandler(new UserRegistrationHandler());
+		this.addCommandHandler(new NickChangeHandler());
+		this.addCommandHandler(new ClientQuitHandler());
+		this.addCommandHandler(new PingHandler());
+		this.addCommandHandler(new PongHandler());
+		this.addCommandHandler(new PrivmsgHandler());
+		this.addCommandHandler(new NoticeHandler());
+		this.addCommandHandler(new ModeCommandHandler());
+		this.addCommandHandler(new ChannelJoinHandler());
+		this.addCommandHandler(new ChannelPartHandler());
+		this.addCommandHandler(new NamesHandler());
+		this.addCommandHandler(new TagMessageHandler());
+		this.addCommandHandler(new TopicHandler());
+		this.addCommandHandler(new ChannelKickHandler());
+		this.addCommandHandler(new AwayHandler());
+		this.addCommandHandler(new WhoHandler());
+		this.addCommandHandler(new WhoisHandler());
 	}
 
 	protected addCoreCapabilities(): void {

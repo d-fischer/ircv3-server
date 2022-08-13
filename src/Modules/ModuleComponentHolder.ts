@@ -26,7 +26,7 @@ export class ModuleComponentHolder {
 	}
 
 	addCommand(command: CommandHandler): void {
-		if (this._server.addCommand(command)) {
+		if (this._server.addCommandHandler(command)) {
 			this._commands.push(command);
 		}
 	}
@@ -42,7 +42,7 @@ export class ModuleComponentHolder {
 			this._server.removeMode(mode);
 		}
 		for (const command of this._commands) {
-			this._server.removeCommand(command);
+			this._server.removeCommandHandler(command);
 		}
 		for (const hook of this._hooks) {
 			this._server.removeModuleHook(hook);

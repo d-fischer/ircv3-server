@@ -6,14 +6,20 @@ import type { Server } from '../Server';
 
 export abstract class CommandHandler<T extends Message = Message> {
 	private readonly _command: string;
+	private readonly _commandType: MessageConstructor<T>;
 	protected _requiresRegistration = true;
 
 	constructor(type: MessageConstructor<T>) {
 		this._command = type.COMMAND;
+		this._commandType = type;
 	}
 
 	get command(): string {
 		return this._command;
+	}
+
+	get commandType(): MessageConstructor<T> {
+		return this._commandType;
 	}
 
 	checkAndHandleCommand(cmd: T, user: User, server: Server, respond: SendResponseCallback): void {
