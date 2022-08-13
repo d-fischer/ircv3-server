@@ -1,4 +1,4 @@
-import { MessageTypes } from '../../../../node_modules/ircv3';
+import { MessageTypes } from 'ircv3';
 import type { Channel } from '../../../Channel';
 import type { SendResponseCallback } from '../../../SendResponseCallback';
 import type { Server } from '../../../Server';

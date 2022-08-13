@@ -153,30 +153,8 @@ export class Server {
 		this._topicLength = config.topicLength ?? 390;
 		this._userLength = config.userLength ?? 12;
 
-		this.addCapability(CoreCapabilities.MessageTags);
-		this.addCapability(CoreCapabilities.Batch);
-		this.addCapability(CoreCapabilities.LabeledResponse);
-		this.addCapability(CoreCapabilities.CapNotify);
-		this.addCapability(CoreCapabilities.AwayNotify);
-
-		this.addCommand(new CapabilityNegotiationHandler());
-		this.addCommand(new UserRegistrationHandler());
-		this.addCommand(new NickChangeHandler());
-		this.addCommand(new ClientQuitHandler());
-		this.addCommand(new PingHandler());
-		this.addCommand(new PongHandler());
-		this.addCommand(new PrivmsgHandler());
-		this.addCommand(new NoticeHandler());
-		this.addCommand(new ModeCommandHandler());
-		this.addCommand(new ChannelJoinHandler());
-		this.addCommand(new ChannelPartHandler());
-		this.addCommand(new NamesHandler());
-		this.addCommand(new TagMessageHandler());
-		this.addCommand(new TopicHandler());
-		this.addCommand(new ChannelKickHandler());
-		this.addCommand(new AwayHandler());
-		this.addCommand(new WhoHandler());
-		this.addCommand(new WhoisHandler());
+		this.addCoreCapabilities();
+		this.addCoreCommands();
 	}
 
 	addOperLogin(login: OperLogin): void {
@@ -350,53 +328,7 @@ export class Server {
 		});
 		user.onRegister(() => {
 			this._nickUserMap.set(this.caseFoldString(user.nick!), user);
-			user.sendNumeric(MessageTypes.Numerics.Reply001Welcome, {
-				welcomeText: 'the server welcomes you!'
-			});
-			user.sendNumeric(MessageTypes.Numerics.Reply002YourHost, {
-				yourHost: `Your host is ${this._serverAddress}, running version ${this._version}`
-			});
-			user.sendNumeric(MessageTypes.Numerics.Reply003Created, {
-				createdText: `This server was created ${this._startupTime.toISOString()}`
-			});
-			const channelModes = this.supportedChannelModes;
-			user.sendNumeric(MessageTypes.Numerics.Reply004ServerInfo, {
-				serverName: this._serverAddress,
-				version: this._version,
-				userModes: this.supportedUserModes,
-				channelModes: Object.values(channelModes).join('').split('').sort().join(''),
-				channelModesWithParam: (
-					channelModes.alwaysWithParam +
-					channelModes.prefix +
-					channelModes.paramWhenSet +
-					channelModes.list
-				)
-					.split('')
-					.sort()
-					.join('')
-			});
-			const reversedPrefixes = [...this._prefixes].reverse();
-			const prefixString = `(${reversedPrefixes.map(pref => pref.modeChar).join('')})${reversedPrefixes
-				.map(pref => pref.prefix)
-				.join('')}`;
-			const chanModesString = `${channelModes.list},${channelModes.alwaysWithParam},${channelModes.paramWhenSet},${channelModes.noParam}`;
-			this.sendSupportTokens(user, [
-				['CHANTYPES', '#'],
-				['CHANLIMIT', `#:${this._channelLimit}`],
-				['CHANNELLEN', this._channelLength.toString()],
-				['NICKLEN', this._nickLength.toString()],
-				['NETWORK', this._networkName],
-				['CHANMODES', chanModesString],
-				['PREFIX', prefixString],
-				['CASEMAPPING', this._caseMapping],
-				['USERLEN', this._userLength.toString()],
-				['TOPICLEN', this._topicLength.toString()]
-			]);
-			if (user.modesAsString) {
-				user.sendNumeric(MessageTypes.Numerics.Reply221UmodeIs, {
-					modes: user.modesAsString
-				});
-			}
+			this.sendServerSupportInfo(user);
 			this.sendMotd(user);
 		});
 		user.onNickChange(oldNick => {
@@ -413,6 +345,56 @@ export class Server {
 		});
 		this._users.add(user);
 		await user.resolveUserIp();
+	}
+
+	sendServerSupportInfo(user: User): void {
+		user.sendNumeric(MessageTypes.Numerics.Reply001Welcome, {
+			welcomeText: 'the server welcomes you!'
+		});
+		user.sendNumeric(MessageTypes.Numerics.Reply002YourHost, {
+			yourHost: `Your host is ${this._serverAddress}, running version ${this._version}`
+		});
+		user.sendNumeric(MessageTypes.Numerics.Reply003Created, {
+			createdText: `This server was created ${this._startupTime.toISOString()}`
+		});
+		const channelModes = this.supportedChannelModes;
+		user.sendNumeric(MessageTypes.Numerics.Reply004ServerInfo, {
+			serverName: this._serverAddress,
+			version: this._version,
+			userModes: this.supportedUserModes,
+			channelModes: Object.values(channelModes).join('').split('').sort().join(''),
+			channelModesWithParam: (
+				channelModes.alwaysWithParam +
+				channelModes.prefix +
+				channelModes.paramWhenSet +
+				channelModes.list
+			)
+				.split('')
+				.sort()
+				.join('')
+		});
+		const reversedPrefixes = [...this._prefixes].reverse();
+		const prefixString = `(${reversedPrefixes.map(pref => pref.modeChar).join('')})${reversedPrefixes
+			.map(pref => pref.prefix)
+			.join('')}`;
+		const chanModesString = `${channelModes.list},${channelModes.alwaysWithParam},${channelModes.paramWhenSet},${channelModes.noParam}`;
+		this.sendSupportTokens(user, [
+			['CHANTYPES', '#'],
+			['CHANLIMIT', `#:${this._channelLimit}`],
+			['CHANNELLEN', this._channelLength.toString()],
+			['NICKLEN', this._nickLength.toString()],
+			['NETWORK', this._networkName],
+			['CHANMODES', chanModesString],
+			['PREFIX', prefixString],
+			['CASEMAPPING', this._caseMapping],
+			['USERLEN', this._userLength.toString()],
+			['TOPICLEN', this._topicLength.toString()]
+		]);
+		if (user.modesAsString) {
+			user.sendNumeric(MessageTypes.Numerics.Reply221UmodeIs, {
+				modes: user.modesAsString
+			});
+		}
 	}
 
 	sendMotd(user: User): void {
@@ -770,5 +752,34 @@ export class Server {
 				return assertNever(this._caseMapping);
 			}
 		}
+	}
+
+	protected addCoreCommands(): void {
+		this.addCommand(new CapabilityNegotiationHandler());
+		this.addCommand(new UserRegistrationHandler());
+		this.addCommand(new NickChangeHandler());
+		this.addCommand(new ClientQuitHandler());
+		this.addCommand(new PingHandler());
+		this.addCommand(new PongHandler());
+		this.addCommand(new PrivmsgHandler());
+		this.addCommand(new NoticeHandler());
+		this.addCommand(new ModeCommandHandler());
+		this.addCommand(new ChannelJoinHandler());
+		this.addCommand(new ChannelPartHandler());
+		this.addCommand(new NamesHandler());
+		this.addCommand(new TagMessageHandler());
+		this.addCommand(new TopicHandler());
+		this.addCommand(new ChannelKickHandler());
+		this.addCommand(new AwayHandler());
+		this.addCommand(new WhoHandler());
+		this.addCommand(new WhoisHandler());
+	}
+
+	protected addCoreCapabilities(): void {
+		this.addCapability(CoreCapabilities.MessageTags);
+		this.addCapability(CoreCapabilities.Batch);
+		this.addCapability(CoreCapabilities.LabeledResponse);
+		this.addCapability(CoreCapabilities.CapNotify);
+		this.addCapability(CoreCapabilities.AwayNotify);
 	}
 }
