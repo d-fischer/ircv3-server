@@ -28,7 +28,7 @@ export class NoticeHandler extends CommandHandler<MessageTypes.Commands.Notice> 
 						},
 						user.prefix,
 						{
-							clientTags
+							customTags: clientTags
 						},
 						user
 					);
@@ -52,7 +52,7 @@ export class NoticeHandler extends CommandHandler<MessageTypes.Commands.Notice> 
 					},
 					user.prefix,
 					{
-						clientTags
+						customTags: clientTags
 					}
 				);
 			} else {

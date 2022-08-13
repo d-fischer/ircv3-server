@@ -32,7 +32,7 @@ export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.Private
 						},
 						user.prefix,
 						{
-							clientTags
+							customTags: clientTags
 						},
 						user
 					);
@@ -57,7 +57,7 @@ export class PrivmsgHandler extends CommandHandler<MessageTypes.Commands.Private
 					},
 					user.prefix,
 					{
-						clientTags
+						customTags: clientTags
 					}
 				);
 

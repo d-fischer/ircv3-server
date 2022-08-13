@@ -32,7 +32,7 @@ export class TagMessageHandler extends CommandHandler<MessageTypes.Commands.TagM
 						},
 						user.prefix,
 						{
-							clientTags
+							customTags: clientTags
 						},
 						user
 					);
@@ -55,7 +55,7 @@ export class TagMessageHandler extends CommandHandler<MessageTypes.Commands.TagM
 					},
 					user.prefix,
 					{
-						clientTags
+						customTags: clientTags
 					}
 				);
 			} else {
