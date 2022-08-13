@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 CWD="$(pwd)"
 cd "$(dirname $0)"
 VERSIONTYPE="${1:-patch}"
