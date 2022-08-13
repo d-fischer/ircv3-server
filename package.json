@@ -1,7 +1,7 @@
 {
   "name": "ircv3-server",
   "description": "A basic IRC server framework.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "lib",
   "types": "lib",
   "exports": {
