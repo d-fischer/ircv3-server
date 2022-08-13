@@ -62,7 +62,7 @@ export class CapabilityNegotiationHandler extends CommandHandler<MessageTypes.Co
 						capNameWithOp.startsWith('-')
 							? {
 									operation: 'remove',
-									name: capNameWithOp.substr(1)
+									name: capNameWithOp.slice(1)
 							  }
 							: {
 									operation: 'add',
