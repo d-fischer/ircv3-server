@@ -388,7 +388,7 @@ export class User extends EventEmitter implements ModeHolder {
 		let tags: Map<string, string> | undefined = undefined;
 		if (this._supportsTags) {
 			tags =
-				(this._negotiatedCapabilities.has(CoreCapabilities.MessageTags.name) ? properties?.customTags : null) ??
+				(this._negotiatedCapabilities.has(CoreCapabilities.MessageTags.name) ? properties?.clientTags : null) ??
 				new Map<string, string>();
 
 			if (properties) {
@@ -401,6 +401,9 @@ export class User extends EventEmitter implements ModeHolder {
 							tags.set('label', properties.repliesToLabel);
 						}
 					}
+				}
+				if (properties.customTags) {
+					tags = new Map([...tags, ...properties.customTags]);
 				}
 			}
 		}
