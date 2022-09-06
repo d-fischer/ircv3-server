@@ -37,6 +37,7 @@ export class ChannelJoinHandler extends CommandHandler<MessageTypes.Commands.Cha
 			}
 
 			server.doJoinChannel(user, channel, false, respond);
+			server.callHook('afterChannelJoin', channel, user, cmd, respond, server);
 		} else {
 			// avoid creating a channel that already exists at all costs
 			if (server.getChannelByName(channelName) !== null) {
@@ -48,7 +49,7 @@ export class ChannelJoinHandler extends CommandHandler<MessageTypes.Commands.Cha
 				return;
 			}
 
-			server.doCreateChannel(user, channelName, respond);
+			server.doCreateChannel(user, channelName, cmd, respond);
 		}
 	}
 

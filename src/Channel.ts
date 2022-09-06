@@ -1,5 +1,6 @@
 import type { Message, MessageConstructor, MessageParamValues, MessagePrefix, SingleMode } from 'ircv3';
 import { MessageTypes, prefixToString } from 'ircv3';
+import { MetadataHolder } from './MetadataHolder';
 import type { ListChangeHandler } from './Modes/Channel/ListChannelModeHandler';
 import { ListChannelModeHandler } from './Modes/Channel/ListChannelModeHandler';
 import type { ModeHandler } from './Modes/ModeHandler';
@@ -11,7 +12,10 @@ import type { ModeState } from './Toolkit/ModeTools';
 import { sortStringByOrder } from './Toolkit/StringTools';
 import type { User } from './User';
 
-export class Channel implements ModeHolder {
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ChannelMetadata {}
+
+export class Channel extends MetadataHolder<ChannelMetadata> implements ModeHolder {
 	private _modes: ModeState[] = [];
 	private _topic = '';
 	private _topicTime = 0;
@@ -21,7 +25,9 @@ export class Channel implements ModeHolder {
 	static stateSorter = (a: ModeState, b: ModeState): number =>
 		a.mode.letter.localeCompare(b.mode.letter) || (a.param && b.param ? a.param.localeCompare(b.param) : 0);
 
-	constructor(private readonly _name: string, creator: User, private readonly _server: Server) {}
+	constructor(private readonly _name: string, creator: User, server: Server) {
+		super(server, 'channel');
+	}
 
 	addUser(user: User, isFirst: boolean = false): void {
 		this._userAccess.set(user, isFirst ? 'o' : '');

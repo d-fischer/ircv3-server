@@ -6,6 +6,7 @@ import type * as net from 'net';
 import { Channel } from './Channel';
 import type { ModeHandler } from './Modes/ModeHandler';
 import type { ModeHolder } from './Modes/ModeHolder';
+import { HookResult } from './Modules/Module';
 import type { SendableMessageProperties } from './SendableMessageProperties';
 import type { SendResponseCallback, SendResponseIntermediateObject } from './SendResponseCallback';
 import type { Server } from './Server';
@@ -31,6 +32,7 @@ export class User extends EventEmitter implements ModeHolder {
 	private _userName?: string;
 	private _hostName: string;
 	private _realName?: string;
+	private _overrideHostName?: string;
 
 	private _hostIpResolved: boolean | null = null;
 	private _capabilitiesNegotiating = false;
@@ -70,6 +72,9 @@ export class User extends EventEmitter implements ModeHolder {
 	async resolveUserIp(): Promise<boolean> {
 		if (this._hostIpResolved !== null) {
 			return this._hostIpResolved;
+		}
+		if (this._server.skipIpResolution) {
+			return (this._hostIpResolved = true);
 		}
 		let result = false;
 		const ip = this._socket.remoteAddress!;
@@ -136,6 +141,11 @@ export class User extends EventEmitter implements ModeHolder {
 
 	get isAway(): boolean {
 		return this._awayMessage != null;
+	}
+
+	set overrideHostName(newHostName: string) {
+		// TODO if this is called while already registered, send CHGHOST or QUIT/JOIN to everyone in common channels
+		this._overrideHostName = newHostName;
 	}
 
 	isOper(forForeignServer = false): boolean {
@@ -220,8 +230,7 @@ export class User extends EventEmitter implements ModeHolder {
 	}
 
 	get publicHostName(): string {
-		// TODO cloaking?
-		return this._hostName;
+		return this._overrideHostName ?? this._hostName;
 	}
 
 	get publicHostNameAsParam(): string {
@@ -516,8 +525,11 @@ export class User extends EventEmitter implements ModeHolder {
 					suffix: 'Nick already in use'
 				});
 			} else {
-				this._registered = true;
-				this.emit(this.onRegister);
+				const result = this._server.callHook('userRegister', this);
+				if (result !== HookResult.DENY) {
+					this._registered = true;
+					this.emit(this.onRegister);
+				}
 			}
 		}
 	}

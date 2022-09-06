@@ -60,6 +60,7 @@ export interface ServerConfiguration {
 	topicLength?: number;
 	userLength?: number;
 	independentUsers?: boolean;
+	skipIpResolution?: boolean;
 }
 
 export interface InternalAccessLevelDefinition extends AccessLevelDefinition {
@@ -78,6 +79,7 @@ export class Server {
 	private readonly _topicLength: number;
 	private readonly _userLength: number;
 	private readonly _independentUsers: boolean;
+	private readonly _skipIpResolution: boolean;
 
 	private readonly _users = new Set<User>();
 	private readonly _nickUserMap = new Map<string, User>();
@@ -97,14 +99,17 @@ export class Server {
 				'channelCreate',
 				'afterChannelCreate',
 				'channelJoin',
+				'afterChannelJoin',
 				'channelMessage',
 				'channelNotice',
 				'channelTagMessage',
 				'modeChange',
 				'preTopicChange',
 				'userCreate',
+				'userRegister',
 				'userDestroy',
-				'channelCheckVisibility'
+				'channelCheckVisibility',
+				'metadataChange'
 			] as Array<keyof ModuleHookTypes>
 		).map((hookName): [keyof ModuleHookTypes, Set<ModuleHook<never>>] => [hookName, new Set<ModuleHook<never>>()])
 	);
@@ -155,6 +160,7 @@ export class Server {
 		this._topicLength = config.topicLength ?? 390;
 		this._userLength = config.userLength ?? 12;
 		this._independentUsers = config.independentUsers ?? false;
+		this._skipIpResolution = config.skipIpResolution ?? false;
 
 		this.addCoreCapabilities();
 		this.addCoreCommands();
@@ -243,6 +249,10 @@ export class Server {
 
 	get channelLimit(): number {
 		return this._channelLimit;
+	}
+
+	get skipIpResolution(): boolean {
+		return this._skipIpResolution;
 	}
 
 	getPrefixDefinitionByModeChar(char: string): InternalAccessLevelDefinition | null {
@@ -468,7 +478,12 @@ export class Server {
 		channel.sendNames(user, respond);
 	}
 
-	doCreateChannel(user: User, channelName: string, respond: SendResponseCallback): Channel {
+	doCreateChannel(
+		user: User,
+		channelName: string,
+		cmd: MessageTypes.Commands.ChannelJoin,
+		respond: SendResponseCallback
+	): Channel | null {
 		// avoid creating a channel that already exists at ALL costs! even if it means checking existence more than once
 		const foldedChannelName = this.caseFoldString(channelName);
 		if (this._channels.has(foldedChannelName)) {
@@ -479,12 +494,19 @@ export class Server {
 
 		this._channels.set(foldedChannelName, channel);
 
-		this.doJoinChannel(user, channel, true, respond);
+		const res = this.callHook('channelJoin', channel, user, cmd, respond, this);
+		if (res === HookResult.DENY) {
+			this.destroyChannel(channel);
 
+			return null;
+		}
+
+		this.doJoinChannel(user, channel, true, respond);
 		const channelCreateFlags: ChannelCreateFlags = {
 			modesToSet: []
 		};
 		this.callHook('afterChannelCreate', channel, user, channelCreateFlags);
+		this.callHook('afterChannelJoin', channel, user, cmd, respond, this);
 
 		if (channelCreateFlags.modesToSet.length) {
 			let letters = '';

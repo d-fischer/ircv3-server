@@ -1,4 +1,5 @@
-export { Channel } from './Channel';
+export { Channel, type ChannelMetadata } from './Channel';
+export { MetadataHolder, type MetadataType } from './MetadataHolder';
 export { type OperLogin } from './OperLogin';
 export { type SendableMessageProperties } from './SendableMessageProperties';
 export { type SendResponseCallback } from './SendResponseCallback';
